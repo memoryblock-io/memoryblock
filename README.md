@@ -1,43 +1,52 @@
-# memoryblock Public GitHub Repositories
+# memoryblock
 
-This directory contains the source code and documentation for all publicly available memoryblock repositories. These repositories are hosted in the [memoryblock GitHub Organization](https://github.com/memoryblock-io).
+memoryblock is an AI memory layer for seamless context sharing between humans and AI systems. It provides an intuitive way to save, organize, and reference your important context in AI conversations.
 
-## Repository Overview
+## Vision
 
-- **mblk-sdk**: Official language-agnostic SDK specification and reference implementation
-- **mblk-js**: JavaScript client for memoryblock API integration
-- **mblk-langchain**: LangChain integration component for memoryblock
-- **mblk-browser-extension**: Browser extension for saving and accessing memory blocks
-- **mblk-vscode-extension**: VSCode extension for developer-focused memory block creation and access
+The memoryblock project aims to solve the critical challenge of context management in AI interactions. By creating a dedicated system for storing and retrieving personal context, we enable more effective and personalized AI experiences without repeatedly explaining the same information.
 
-## Development Guidelines
+## Core Concepts
 
-All public repositories follow these guidelines:
+### Memory Blocks
 
-1. Public documentation focuses on integration, not implementation details
-2. API details are referenced from our official documentation site
-3. Examples are practical and focused on common use cases
-4. No internal or private information is included
-5. All repositories use consistent naming conventions and documentation style
-6. All repositories use the MIT License for maximum compatibility and developer-friendliness
+Memory blocks are discrete pieces of information that you want AI systems to reference. They can contain:
 
-## Package Manager Listings
+- Personal context (about yourself, your preferences, etc.)
+- Project details and requirements
+- Writing style examples
+- Technical documentation
+- Any information you find yourself repeatedly sharing with AI
 
-Our packages are available on various package managers:
+### Smart Pointer System
 
-- NPM: `mblk` and `mblk-js`
-- PyPI: `mblk` and `mblk-langchain`
-- VSCode Marketplace: `mblk-vscode-extension`
-- Chrome Web Store, Firefox Add-ons, Edge Add-ons: `mblk-browser-extension`
+Our innovative `::` syntax allows you to reference your stored information directly in prompts:
 
-## Licensing
+```
+I need you to draft an email using ::my-style and considering ::project-context
+```
 
-All repositories are licensed under the MIT License to encourage wide adoption and integration. The MIT License is permissive and allows for commercial use, modification, distribution, and private use while providing good protection for contributors.
+This streamlines the process of incorporating your stored context into AI conversations.
 
-## Contributing
+## Repositories
 
-We welcome contributions to any of our public repositories. Please see the CONTRIBUTING.md file in each repository for specific guidelines.
+The memoryblock ecosystem consists of several components that work together to provide a seamless experience:
 
-## Note
+- **SDK**: Core implementation for developers to integrate with memoryblock
+- **Client Libraries**: Language-specific implementations for different platforms
+- **LangChain Integration**: Components for using memoryblock with LangChain
+- **Browser Extension**: Save web content as memory blocks
+- **VSCode Extension**: Developer-focused tools for code snippet management
 
-This README should be placed in an "overview" repository in the memoryblock-io GitHub organization to provide a central reference for all public repositories. 
+## Open Source Philosophy
+
+We believe in the power of open source to drive innovation. All our public repositories are licensed under the MIT License to encourage community contributions and widespread adoption. We welcome contributions from developers who share our vision for improved AI context management.
+
+## Getting Started
+
+For developers interested in contributing or integrating with memoryblock, each repository contains detailed documentation to help you get started. See individual repositories for specific setup instructions and examples.
+
+## Learn More
+
+- [Website](https://memoryblock.io)
+- [Documentation](https://memoryblock.io/docs)
