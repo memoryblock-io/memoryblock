@@ -1,6 +1,6 @@
-# memoryblock
+# Memoryblock
 
-memoryblock is an AI memory layer for seamless context sharing between humans and AI systems. It provides an intuitive way to save, organize, and reference your important context in AI conversations.
+Memoryblock is an AI memory layer for seamless context sharing between humans and AI systems. It provides an intuitive way to save, organize, and reference your important context in AI conversations.
 
 ## Vision
 
