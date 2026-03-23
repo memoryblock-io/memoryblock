@@ -1,0 +1,9 @@
+{
+  "name": "@memoryblock/web",
+  "version": "0.1.0-beta",
+  "private": true,
+  "description": "Minimal web UI for memoryblock — pure HTML/CSS/JS, no build step.",
+  "files": [
+    "public/"
+  ]
+}
