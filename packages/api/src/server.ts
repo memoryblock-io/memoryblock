@@ -4,7 +4,7 @@ import { watch, type FSWatcher } from 'node:fs';
 import type { Server, ServerWebSocket } from 'bun';
 import {
     loadGlobalConfig, resolveBlocksDir,
-    loadBlockConfig, loadAuth,
+    loadBlockConfig, loadAuth, saveGlobalConfig,
 } from 'memoryblock';
 import { validateAuthToken } from './auth.js';
 
@@ -111,7 +111,26 @@ export class ApiServer {
                 const url = new URL(req.url);
                 const path = url.pathname;
 
-                // WebSocket Upgrade
+                // Plugin actions: /api/plugins/*
+        if (path.startsWith('/api/plugins')) {
+            const pluginMatch = path.match(/^\/api\/plugins(?:\/([^/]+)\/(install|uninstall|settings))?$/);
+            if (pluginMatch) {
+                if (req.method === 'GET' && !pluginMatch[1]) {
+                    return await self.handleGetPlugins();
+                }
+                if (req.method === 'POST' && pluginMatch[2] === 'install') {
+                    return await self.handleInstallPlugin(pluginMatch[1]);
+                }
+                if (req.method === 'DELETE' && pluginMatch[2] === 'uninstall') {
+                    return await self.handleUninstallPlugin(pluginMatch[1]);
+                }
+                if (req.method === 'POST' && pluginMatch[2] === 'settings') {
+                    return await self.handlePluginSettings(pluginMatch[1], req);
+                }
+            }
+        }
+
+        // WebSocket Upgrade
                 if (path === '/api/ws') {
                     const token = self.extractToken(req);
                     const currentToken = await self.getDynamicToken();
@@ -208,6 +227,12 @@ export class ApiServer {
             return await this.handleGetChannels();
         }
 
+        // Global Config routes
+        if (path === '/api/config') {
+            if (req.method === 'GET') return await this.handleGetGlobalConfig();
+            if (req.method === 'POST') return await this.handleUpdateGlobalConfig(req);
+        }
+
         // Single-block routes: /api/blocks/:name
         const blockMatch = path.match(/^\/api\/blocks\/([^/]+)$/);
         if (blockMatch) {
@@ -224,6 +249,7 @@ export class ApiServer {
                 case 'stop': return await this.handleStopBlock(blockName);
                 case 'reset': return await this.handleResetBlock(blockName, url);
                 case 'chat': return await this.handleChat(blockName, req);
+                case 'stream': return await this.handleStream(blockName, req);
                 default: break;
             }
         }
@@ -528,7 +554,7 @@ export class ApiServer {
                     note = `Message queued, but daemon failed to start: ${(startErr as Error).message}`;
                 }
             } else {
-                note = 'Message queued. Daemon is processing.';
+                note = '';
             }
 
             // Ensure we have a file watcher for this block
@@ -537,6 +563,137 @@ export class ApiServer {
             return this.json({ queued: true, block: blockName, note });
         } catch (err) {
             return this.error(400, `Chat failed: ${(err as Error).message}`);
+        }
+    }
+
+    private async handleStream(blockName: string, req: Request): Promise<Response> {
+        try {
+            const body = await req.json() as { chunk?: string };
+            if (body.chunk) {
+                const subs = this.subscribers.get(blockName);
+                if (subs && subs.size > 0) {
+                    const msg = JSON.stringify({ type: 'stream', chunk: body.chunk });
+                    for (const ws of subs) {
+                        try {
+                            ws.send(msg);
+                        } catch { /* ignore dropped conn */ }
+                    }
+                }
+            }
+            return this.json({ ok: true });
+        } catch {
+            return this.error(400, 'Invalid stream payload');
+        }
+    }
+
+    private async handleGetPlugins(): Promise<Response> {
+        try {
+            const { PluginInstaller } = await import('@memoryblock/plugin-installer');
+            const installer = new PluginInstaller();
+            const plugins = await installer.listPlugins();
+
+            const { join } = await import('node:path');
+            const { readFile } = await import('node:fs/promises');
+            let installed: Record<string, string> = {};
+            try {
+                const pkgRaw = await readFile(join(this.config.workspacePath, 'package.json'), 'utf8');
+                installed = JSON.parse(pkgRaw).dependencies || {};
+            } catch {}
+
+            const mapped = plugins.map((p: any) => ({
+                ...p,
+                installed: !!installed[p.package]
+            }));
+
+            // also merge settings
+            for (const p of mapped) {
+                if (p.settings) {
+                    const saved = await installer.getPluginSettings(p.id, this.config.workspacePath);
+                    for (const [key, field] of Object.entries(p.settings as Record<string, any>)) {
+                        if (saved[key] !== undefined) {
+                            field.default = saved[key];
+                        }
+                    }
+                }
+            }
+
+            return this.json({ plugins: mapped });
+        } catch (err: any) {
+            return this.error(500, err.message);
+        }
+    }
+
+    private async handleInstallPlugin(pluginId: string): Promise<Response> {
+        const { PluginInstaller } = await import('@memoryblock/plugin-installer');
+        const installer = new PluginInstaller();
+
+        let controller: ReadableStreamDefaultController | undefined;
+        const stream = new ReadableStream({
+            start(c) {
+                controller = c;
+            }
+        });
+
+        installer.install(pluginId, {
+            cwd: this.config.workspacePath,
+            onLog: (chunk) => {
+                if (controller) controller.enqueue(new TextEncoder().encode(chunk));
+            }
+        }).then(res => {
+            if (controller) {
+                controller.enqueue(new TextEncoder().encode(`\n__RESULT__${JSON.stringify({ success: res.success, message: res.message })}`));
+                controller.close();
+            }
+        }).catch(err => {
+            if (controller) {
+                controller.enqueue(new TextEncoder().encode(`\n__RESULT__${JSON.stringify({ success: false, message: err.message })}`));
+                controller.close();
+            }
+        });
+
+        return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    }
+
+    private async handleUninstallPlugin(pluginId: string): Promise<Response> {
+        const { PluginInstaller } = await import('@memoryblock/plugin-installer');
+        const installer = new PluginInstaller();
+
+        let controller: ReadableStreamDefaultController | undefined;
+        const stream = new ReadableStream({
+            start(c) {
+                controller = c;
+            }
+        });
+
+        installer.remove(pluginId, {
+            cwd: this.config.workspacePath,
+            onLog: (chunk) => {
+                if (controller) controller.enqueue(new TextEncoder().encode(chunk));
+            }
+        }).then(res => {
+            if (controller) {
+                controller.enqueue(new TextEncoder().encode(`\n__RESULT__${JSON.stringify({ success: res.success, message: res.message })}`));
+                controller.close();
+            }
+        }).catch(err => {
+            if (controller) {
+                controller.enqueue(new TextEncoder().encode(`\n__RESULT__${JSON.stringify({ success: false, message: err.message })}`));
+                controller.close();
+            }
+        });
+
+        return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    }
+
+    private async handlePluginSettings(pluginId: string, req: Request): Promise<Response> {
+        try {
+            const body = await req.json();
+            const { PluginInstaller } = await import('@memoryblock/plugin-installer');
+            const installer = new PluginInstaller();
+            await installer.savePluginSettings(pluginId, body, this.config.workspacePath);
+            return this.json({ success: true });
+        } catch (err: any) {
+            return this.error(400, err.message);
         }
     }
 
@@ -670,6 +827,27 @@ export class ApiServer {
             { name: 'slack', status: 'planned', description: 'Slack bot' },
         ];
         return this.json({ channels });
+    }
+
+    private async handleGetGlobalConfig(): Promise<Response> {
+        try {
+            const globalConfig = await loadGlobalConfig();
+            return this.json({ config: globalConfig });
+        } catch (err) {
+            return this.error(500, `Failed to load global config: ${(err as Error).message}`);
+        }
+    }
+
+    private async handleUpdateGlobalConfig(req: Request): Promise<Response> {
+        try {
+            const updates = await req.json() as Record<string, unknown>;
+            const globalConfig = await loadGlobalConfig();
+            const merged = { ...globalConfig, ...updates };
+            await saveGlobalConfig(merged as any);
+            return this.json({ success: true, config: merged });
+        } catch (err) {
+            return this.error(500, `Failed to update global config: ${(err as Error).message}`);
+        }
     }
 
     private async handleGetBlockLogs(name: string): Promise<Response> {
