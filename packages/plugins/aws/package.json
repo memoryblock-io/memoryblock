@@ -1,0 +1,19 @@
+{
+  "name": "@memoryblock/plugin-aws",
+  "version": "0.1.0-beta",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "memoryblock": "workspace:*",
+    "@aws-sdk/client-bedrock-runtime": "^3.700.0",
+    "@smithy/node-http-handler": "^4.0.0"
+  }
+}

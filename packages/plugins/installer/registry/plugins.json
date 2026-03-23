@@ -1,0 +1,74 @@
+{
+  "plugins": [
+    {
+      "id": "agents",
+      "name": "Multi-Agent Orchestration",
+      "description": "Spawn and manage sub-agents from within a block",
+      "package": "@memoryblock/plugin-agents",
+      "version": "0.1.0",
+      "toolNames": ["create_agent", "list_agents", "query_agent"],
+      "requiresAuth": [],
+      "category": "core",
+      "core": true,
+      "blockSpecific": true,
+      "settings": {
+        "maxSubAgents": { "type": "number", "label": "Max sub-agents per block", "default": 3, "min": 1, "max": 10 },
+        "subAgentTimeout": { "type": "number", "label": "Sub-agent timeout (seconds)", "default": 120, "min": 10, "max": 600 }
+      }
+    },
+    {
+      "id": "web-search",
+      "name": "Web Search",
+      "description": "Search the web using your configured provider",
+      "package": "@memoryblock/plugin-web-search",
+      "version": "0.1.0",
+      "toolNames": ["web_search"],
+      "requiresAuth": ["brave"],
+      "category": "search",
+      "settings": {
+        "maxResults": { "type": "number", "label": "Max results per search", "default": 5, "min": 1, "max": 20 }
+      }
+    },
+    {
+      "id": "aws",
+      "name": "AWS Tools",
+      "description": "AWS SDK client factory for service integration",
+      "package": "@memoryblock/plugin-aws",
+      "version": "0.1.0",
+      "toolNames": [],
+      "requiresAuth": ["aws"],
+      "category": "cloud",
+      "settings": {
+        "defaultRegion": { "type": "text", "label": "Default AWS Region", "default": "us-east-1", "placeholder": "us-east-1" }
+      }
+    },
+    {
+      "id": "fetch-webpage",
+      "name": "Fetch Webpage",
+      "description": "Extract and summarize content from web pages",
+      "package": "@memoryblock/plugin-fetch-webpage",
+      "version": "0.1.0",
+      "toolNames": ["fetch_webpage"],
+      "requiresAuth": [],
+      "category": "web",
+      "status": "upcoming"
+    },
+    {
+      "id": "containers",
+      "name": "Container Isolation",
+      "description": "Run tools inside Podman containers for OS-level isolation",
+      "package": "@memoryblock/plugin-containers",
+      "version": "0.1.0",
+      "toolNames": [],
+      "requiresAuth": [],
+      "category": "security",
+      "status": "upcoming",
+      "settings": {
+        "runtime": { "type": "select", "label": "Container Runtime", "default": "podman", "options": ["podman"] },
+        "defaultImage": { "type": "text", "label": "Default Image", "default": "memoryblock/sandbox:latest", "placeholder": "memoryblock/sandbox:latest" },
+        "memoryLimit": { "type": "text", "label": "Memory Limit", "default": "256m", "placeholder": "256m" },
+        "networkMode": { "type": "select", "label": "Network Mode", "default": "none", "options": ["none", "host", "bridge"] }
+      }
+    }
+  ]
+}
