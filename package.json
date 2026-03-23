@@ -5,6 +5,7 @@
   "description": "Deploy isolated, multi-agent AI assistants on your local machine with extreme resource efficiency.",
   "scripts": {
     "dev:build": "pnpm install && pnpm --filter @memoryblock/locale run build && pnpm --filter memoryblock run build && pnpm --filter @memoryblock/plugin-aws run build && pnpm --filter @memoryblock/adapters run build && pnpm --filter @memoryblock/tools run build && pnpm --filter @memoryblock/plugin-agents run build && pnpm -r run build",
+    "dev:restart": "pnpm mblk:shutdown && pnpm dev:build && pnpm mblk:restart",
     "dev:lint": "npx eslint 'packages/*/src/**/*.ts' 'packages/plugins/*/src/**/*.ts'",
     "dev:lint:fix": "npx eslint --fix 'packages/*/src/**/*.ts' 'packages/plugins/*/src/**/*.ts'",
     "dev:verify": "$HOME/.bun/bin/bun scripts/verify.js",
