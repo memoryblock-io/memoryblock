@@ -32,6 +32,16 @@ export function renderSettings(container) {
                         </div>
                         <div class="setting-row">
                             <div>
+                                <div class="setting-label">Channel Connectivity Alerts</div>
+                                <div class="setting-desc">Broadcast "online" and "offline" status announcements to channels.</div>
+                            </div>
+                            <label class="plugin-toggle">
+                                <input type="checkbox" id="setting-channel-alerts" disabled>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <div>
                                 <div class="setting-label">Session Status</div>
                                 <div class="setting-desc">You are connected to the API correctly.</div>
                             </div>
@@ -116,6 +126,39 @@ export function renderSettings(container) {
 
     // Load plugin settings
     loadPluginSettings();
+    
+    // Load general settings
+    loadGeneralSettings();
+}
+
+async function loadGeneralSettings() {
+    try {
+        const data = await api('/api/config');
+        if (!data || !data.config) return;
+        
+        const alertsToggle = document.getElementById('setting-channel-alerts');
+        if (alertsToggle) {
+            alertsToggle.checked = data.config.channelAlerts !== false;
+            alertsToggle.disabled = false;
+            
+            alertsToggle.addEventListener('change', async () => {
+                alertsToggle.disabled = true;
+                try {
+                    await api('/api/config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ channelAlerts: alertsToggle.checked })
+                    });
+                } catch {
+                    alertsToggle.checked = !alertsToggle.checked; // revert on fail
+                } finally {
+                    alertsToggle.disabled = false;
+                }
+            });
+        }
+    } catch {
+        // silently fail to load config
+    }
 }
 
 async function loadPluginSettings() {
@@ -133,25 +176,33 @@ async function loadPluginSettings() {
 
         list.innerHTML = plugins.map(pl => `
             <div class="plugin-settings-card" data-plugin="${pl.id}">
-                <div class="plugin-settings-header">
-                    <div class="plugin-settings-info">
+                <div class="plugin-settings-header" style="align-items: center; display: flex; justify-content: space-between;">
+                    <div class="plugin-settings-info" style="flex: 1;">
                         <span class="plugin-settings-name">
                             ${pl.core ? '●' : '○'} ${pl.name}
                             ${pl.core ? '<span class="badge-core">core</span>' : ''}
                         </span>
                         <span class="plugin-settings-desc">${pl.description}</span>
                     </div>
-                    ${pl.settings && Object.keys(pl.settings).length > 0
-                        ? `<button class="btn-small plugin-expand" data-id="${pl.id}">settings ▾</button>`
-                        : '<span class="dim">no settings</span>'}
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <label class="plugin-toggle" title="${pl.core ? 'Core plugins cannot be disabled' : 'Toggle plugin installation'}">
+                            <input type="checkbox" class="plugin-install-toggle" data-id="${pl.id}" ${pl.installed ? 'checked' : ''} ${pl.core ? 'disabled' : ''}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        ${pl.settings && Object.keys(pl.settings).length > 0
+                            ? `<button class="btn-small plugin-expand" data-id="${pl.id}">settings ▾</button>`
+                            : ''}
+                    </div>
                 </div>
+                <!-- Logs container for install/uninstall streaming -->
+                <div class="plugin-logs" id="plugin-logs-${pl.id}" style="display:none; margin: 12px 0; background: var(--bg-deep); padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; color: #a3a3a3; max-height: 200px; overflow-y: auto; white-space: pre-wrap;"></div>
                 <div class="plugin-settings-body" id="plugin-body-${pl.id}" style="display:none;">
                     ${renderPluginFields(pl)}
                 </div>
             </div>
         `).join('');
 
-        // Expand/collapse
+        // Expand/collapse settings
         list.querySelectorAll('.plugin-expand').forEach(btn => {
             btn.addEventListener('click', () => {
                 const body = document.getElementById(`plugin-body-${btn.dataset.id}`);
@@ -159,6 +210,61 @@ async function loadPluginSettings() {
                     const open = body.style.display !== 'none';
                     body.style.display = open ? 'none' : 'block';
                     btn.textContent = open ? 'settings ▾' : 'settings ▴';
+                }
+            });
+        });
+
+        // Install/Uninstall toggle
+        list.querySelectorAll('.plugin-install-toggle').forEach(toggle => {
+            toggle.addEventListener('change', async (e) => {
+                const isChecked = toggle.checked; // the target state
+                const pluginId = toggle.dataset.id;
+                const action = isChecked ? 'install' : 'uninstall';
+                const logsDiv = document.getElementById(`plugin-logs-${pluginId}`);
+                
+                toggle.disabled = true; // prevent multi-click
+                logsDiv.style.display = 'block';
+                logsDiv.textContent = `Starting ${action} for ${pluginId}...\n`;
+
+                try {
+                    const res = await fetch(`${location.origin}/api/plugins/${pluginId}/${action}`, {
+                        method: action === 'install' ? 'POST' : 'DELETE',
+                        headers: { 'Authorization': `Bearer ${document.cookie || localStorage.getItem('mblk_token')}` } // api fetch overrides
+                    });
+
+                    if (!res.body) throw new Error('ReadableStream not supported');
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder('utf-8');
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        const chunk = decoder.decode(value, { stream: true });
+                        
+                        // Parse the __RESULT__ marker if present
+                        if (chunk.includes('__RESULT__')) {
+                            const [logPart, resultStr] = chunk.split('__RESULT__');
+                            logsDiv.textContent += logPart;
+                            try {
+                                const result = JSON.parse(resultStr);
+                                if (!result.success) {
+                                    logsDiv.textContent += `\nError: ${result.message}`;
+                                    toggle.checked = !isChecked; // revert
+                                } else {
+                                    logsDiv.textContent += `\nSuccess: ${result.message}`;
+                                }
+                            } catch { }
+                        } else {
+                            logsDiv.textContent += chunk;
+                        }
+                        logsDiv.scrollTop = logsDiv.scrollHeight;
+                    }
+                } catch (err) {
+                    logsDiv.textContent += `\nError: ${err.message}`;
+                    toggle.checked = !isChecked; // revert
+                } finally {
+                    toggle.disabled = false;
+                    setTimeout(() => { if (logsDiv) logsDiv.style.display = 'none'; }, 3000);
                 }
             });
         });

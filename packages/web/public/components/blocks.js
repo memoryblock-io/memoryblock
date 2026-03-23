@@ -121,8 +121,6 @@ export async function renderBlockDetail(container, blockName) {
                             <button class="action-btn" id="chat-btn" title="Open Web Chat"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-svg" style="margin-right:6px;"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg> Chat</button>
                             <button class="action-btn primary" id="start-btn" title="Start monitor"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-svg" style="margin-right:6px;"><polygon points="5 3 19 12 5 21 5 3"/></svg> Start</button>
                             <button class="action-btn" id="stop-btn" title="Stop monitor"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-svg" style="margin-right:6px;"><rect width="18" height="18" x="3" y="3" rx="2"/></svg> Stop</button>
-                            <button class="action-btn" id="reset-btn" title="Reset state"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-svg" style="margin-right:6px;"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg> Reset</button>
-                            <button class="action-btn danger" id="archive-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-svg" style="margin-right:6px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg> Archive</button>
                         </div>
                     </div>
                     
@@ -240,7 +238,11 @@ export async function renderBlockDetail(container, blockName) {
                             </div>
                         </div>
 
-                        <div class="form-actions" style="margin-top: 16px;">
+                        <div class="form-actions" style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; gap: 8px;">
+                                <button class="action-btn" id="reset-btn" title="Reset state"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-svg" style="margin-right:6px;"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg> Reset</button>
+                                <button class="action-btn danger" id="archive-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-svg" style="margin-right:6px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg> Archive</button>
+                            </div>
                             <button id="save-config-btn" class="action-btn primary">Save Config Changes</button>
                         </div>
                     </div>
@@ -254,10 +256,6 @@ export async function renderBlockDetail(container, blockName) {
                             <div class="stat">
                                 <div class="stat-value" id="val-status" style="font-size:1rem; color:var(--text);">${pulse.status || 'SLEEPING'}</div>
                                 <div class="stat-label">status</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-value" id="val-cost">$${(costs.totalCost || 0).toFixed(4)}</div>
-                                <div class="stat-label">total cost</div>
                             </div>
                             <div class="stat">
                                 <div class="stat-value" id="val-in">${formatTokens(costs.totalInput || 0)}</div>
@@ -294,7 +292,6 @@ export async function renderBlockDetail(container, blockName) {
         activeWs = connectWs(blockName, async () => {
             try {
                 const live = await api(`/api/blocks/${blockName}`);
-                document.getElementById('val-cost').textContent = '$' + (live.costs?.totalCost || 0).toFixed(4);
                 document.getElementById('val-in').textContent = formatTokens(live.costs?.totalInput || 0);
                 document.getElementById('val-out').textContent = formatTokens(live.costs?.totalOutput || 0);
                 document.getElementById('val-status').textContent = live.pulse?.status || 'SLEEPING';

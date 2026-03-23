@@ -60,6 +60,7 @@ let chatWs = null;
 let currentSession = 'web';
 
 export async function renderChatView(container, blockName) {
+    let renderedMessageCount = 0;
     // Fetch block details to get monitor name + emoji
     let monitorLabel = blockName;
     let monitorEmoji = '';
@@ -181,15 +182,48 @@ export async function renderChatView(container, blockName) {
             
             const channelLabels = { web: 'Web Channel', cli: 'CLI Channel', telegram: 'Telegram' };
             messagesDiv.innerHTML = '';
+            renderedMessageCount = 0;
+            removeTypingIndicator();
             appendMessage('system', `Viewing ${channelLabels[session] || session} logs for ${escapeHtml(displayName)}.`);
-            loadChatHistory(session);
+            loadChatHistory(session, true);
+
+            // Disable input if not web channel
+            const inputArea = document.querySelector('.chat-input-area');
+            if (session !== 'web') {
+                inputArea.classList.add('disabled-input');
+                chatInput.disabled = true;
+                sendBtn.disabled = true;
+                chatInput.placeholder = 'Viewing mode (switch to Web Channel to chat)';
+            } else {
+                inputArea.classList.remove('disabled-input');
+                chatInput.disabled = false;
+                sendBtn.disabled = false;
+                chatInput.placeholder = 'Type a message... (Enter to send, Shift+Enter for new line)';
+                chatInput.focus();
+            }
         });
     });
 
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('chat-send-btn');
 
+    function removeTypingIndicator() {
+        const ind = document.getElementById('typing-indicator');
+        if (ind) ind.remove();
+    }
+
+    function showTypingIndicator() {
+        if (document.getElementById('typing-indicator')) return;
+        const msgDiv = document.createElement('div');
+        msgDiv.id = 'typing-indicator';
+        msgDiv.className = `chat-msg assistant typing-indicator`;
+        msgDiv.innerHTML = `<div class="msg-content"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
+        messagesDiv.appendChild(msgDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
     function appendMessage(role, content) {
+        removeTypingIndicator();
         const msgDiv = document.createElement('div');
         msgDiv.className = `chat-msg ${role}`;
         
@@ -205,12 +239,44 @@ export async function renderChatView(container, blockName) {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
-    async function loadChatHistory(channel) {
+    let currentStreamDiv = null;
+    let currentStreamText = '';
+
+    function handleStreamChunk(chunk) {
+        if (!currentStreamDiv) {
+            removeTypingIndicator();
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `chat-msg assistant`;
+            currentStreamDiv = document.createElement('div');
+            currentStreamDiv.className = 'msg-content';
+            msgDiv.appendChild(currentStreamDiv);
+            messagesDiv.appendChild(msgDiv);
+            currentStreamText = '';
+        }
+        
+        currentStreamText += chunk;
+        currentStreamDiv.innerHTML = renderMarkdown(currentStreamText);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function resetStreamDiv() {
+        if (currentStreamDiv) {
+            currentStreamDiv.parentElement.remove();
+            currentStreamDiv = null;
+            currentStreamText = '';
+        }
+    }
+
+    async function loadChatHistory(channel, initialLoad = false) {
         try {
             const data = await api(`/api/blocks/${blockName}/chat?channel=${channel || 'web'}`, { method: 'GET' });
-            // Don't clear — caller clears if needed
-            if (data.messages && data.messages.length > 0) {
-                for (const m of data.messages) {
+            if (data.messages && data.messages.length > renderedMessageCount) {
+                const newMessages = data.messages.slice(renderedMessageCount);
+                renderedMessageCount = data.messages.length;
+                
+                resetStreamDiv();
+                
+                for (const m of newMessages) {
                     appendMessage(m.role, m.content);
                 }
             }
@@ -248,6 +314,9 @@ export async function renderChatView(container, blockName) {
         chatInput.value = '';
         chatInput.style.height = 'auto';
         appendMessage('user', text);
+        renderedMessageCount++;
+
+        showTypingIndicator();
 
         // Wake the block if asleep
         try {
@@ -268,12 +337,16 @@ export async function renderChatView(container, blockName) {
                 body: JSON.stringify({ message: text })
             });
             if (res.error) {
+                removeTypingIndicator();
                 appendMessage('error', res.error);
+                renderedMessageCount--;
             } else if (res.note) {
                 appendMessage('system', res.note);
             }
         } catch (err) {
+            removeTypingIndicator();
             appendMessage('error', 'Error: ' + err.message);
+            renderedMessageCount--;
         }
     }
 
@@ -294,12 +367,21 @@ export async function renderChatView(container, blockName) {
 
     if (chatWs) chatWs.close();
     chatWs = connectWs(blockName, () => {
-        loadChatHistory(currentSession);
+        loadChatHistory(currentSession, false); // initialLoad = false for ws refresh
         updateConnectionStatus();
     });
 
+    chatWs.addEventListener('message', (e) => {
+        try {
+            const msg = JSON.parse(e.data);
+            if (msg.type === 'stream') {
+                handleStreamChunk(msg.chunk);
+            }
+        } catch {}
+    });
+
     currentSession = 'web';
-    loadChatHistory('web');
+    loadChatHistory('web', true);
     updateConnectionStatus();
     setTimeout(() => chatInput.focus(), 300);
 }
