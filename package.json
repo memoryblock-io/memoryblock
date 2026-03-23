@@ -1,0 +1,68 @@
+{
+  "name": "memoryblock-monorepo",
+  "version": "0.1.0-beta",
+  "private": true,
+  "description": "Deploy isolated, multi-agent AI assistants on your local machine with extreme resource efficiency.",
+  "scripts": {
+    "dev:build": "pnpm install && pnpm --filter @memoryblock/locale run build && pnpm --filter memoryblock run build && pnpm --filter @memoryblock/plugin-aws run build && pnpm --filter @memoryblock/adapters run build && pnpm --filter @memoryblock/tools run build && pnpm --filter @memoryblock/plugin-agents run build && pnpm -r run build",
+    "dev:lint": "npx eslint 'packages/*/src/**/*.ts' 'packages/plugins/*/src/**/*.ts'",
+    "dev:lint:fix": "npx eslint --fix 'packages/*/src/**/*.ts' 'packages/plugins/*/src/**/*.ts'",
+    "dev:verify": "$HOME/.bun/bin/bun scripts/verify.js",
+    "dev:reset": "node scripts/reset.js",
+    "dev:prep": "pnpm dev:clean && pnpm install && pnpm dev:lint && pnpm dev:verify && pnpm dev:build",
+    "dev:clean": "rm -rf node_modules packages/*/node_modules packages/plugins/*/node_modules packages/*/dist packages/plugins/*/dist _playground/node_modules *.tsbuildinfo >/dev/null 2>&1;",
+    "dev:bump": "$HOME/.bun/bin/bun scripts/bump.js",
+    "mblk": "$HOME/.bun/bin/bun packages/core/src/bin/mblk.ts",
+    "mblk:start": "$HOME/.bun/bin/bun packages/core/src/bin/mblk.ts start",
+    "mblk:stop": "$HOME/.bun/bin/bun packages/core/src/bin/mblk.ts stop",
+    "mblk:status": "$HOME/.bun/bin/bun packages/core/src/bin/mblk.ts status",
+    "mblk:create": "$HOME/.bun/bin/bun packages/core/src/bin/mblk.ts create",
+    "mblk:reset": "$HOME/.bun/bin/bun packages/core/src/bin/mblk.ts reset",
+    "mblk:shutdown": "$HOME/.bun/bin/bun packages/core/src/bin/mblk.ts shutdown",
+    "mblk:restart": "$HOME/.bun/bin/bun packages/core/src/bin/mblk.ts restart",
+    "mblk:token": "$HOME/.bun/bin/bun packages/core/src/bin/mblk.ts server token",
+    "mblk:add": "$HOME/.bun/bin/bun packages/core/src/bin/mblk.ts add",
+    "mblk:remove": "$HOME/.bun/bin/bun packages/core/src/bin/mblk.ts remove"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.27.0",
+    "@types/node": "^18.0.0",
+    "eslint": "^9.39.3",
+    "prettier": "^3.8.1",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.57.0"
+  },
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=18.0.0"
+  },
+  "packageManager": "pnpm@10.32.1",
+  "pnpm": {
+    "overrides": {
+      "flatted": "^3.4.2",
+      "fast-xml-parser": "^5.5.7"
+    }
+  },
+  "keywords": [
+    "memoryblock",
+    "mblk",
+    "ai-agent",
+    "multi-agent",
+    "automation",
+    "agentic-framework"
+  ],
+  "author": {
+    "name": "Ghazi",
+    "url": "https://mgks.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memoryblock-io/memoryblock.git"
+  },
+  "bugs": {
+    "url": "https://github.com/memoryblock-io/memoryblock/issues"
+  },
+  "homepage": "https://memoryblock.io",
+  "funding": "https://github.com/sponsors/mgks",
+  "license": "MIT"
+}
