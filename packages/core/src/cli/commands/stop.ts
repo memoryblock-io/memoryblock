@@ -1,5 +1,5 @@
 import type { GlobalConfig } from '../../types.js';
-import { loadGlobalConfig, resolveBlocksDir, resolveBlockPath, savePulseState, loadPulseState } from '../../utils/config.js';
+import { loadGlobalConfig, resolveBlocksDir, resolveBlockPath, savePulseState, loadPulseState, loadBlockConfig, saveBlockConfig } from '../../utils/config.js';
 import { pathExists } from '../../utils/fs.js';
 import { log } from '../logger.js';
 import { promises as fsp } from 'node:fs';
@@ -12,7 +12,7 @@ const DAEMON_PKG = '@memoryblock/daemon';
  * Updates pulse state to SLEEPING.
  * In the MVP foreground model, this is mainly used for cleanup.
  */
-export async function stopCommand(blockName?: string): Promise<void> {
+export async function stopCommand(blockName?: string, options?: { preserveEnabled?: boolean }): Promise<void> {
   const globalConfig = await loadGlobalConfig();
   const blocksDir = resolveBlocksDir(globalConfig);
 
@@ -22,14 +22,14 @@ export async function stopCommand(blockName?: string): Promise<void> {
   }
 
   if (blockName) {
-    await stopBlock(globalConfig, blockName);
+    await stopBlock(globalConfig, blockName, options);
   } else {
     log.brand('Stopping all blocks...\n');
     const entries = await fsp.readdir(blocksDir, { withFileTypes: true });
     let stopped = 0;
     for (const entry of entries) {
       if (entry.isDirectory()) {
-        const didStop = await stopBlock(globalConfig, entry.name);
+        const didStop = await stopBlock(globalConfig, entry.name, options);
         if (didStop) stopped++;
       }
     }
@@ -39,7 +39,7 @@ export async function stopCommand(blockName?: string): Promise<void> {
   }
 }
 
-async function stopBlock(globalConfig: GlobalConfig, name: string): Promise<boolean> {
+async function stopBlock(globalConfig: GlobalConfig, name: string, options?: { preserveEnabled?: boolean }): Promise<boolean> {
   const blockPath = resolveBlockPath(globalConfig, name);
 
   if (!await pathExists(join(blockPath, 'pulse.json'))) {
@@ -69,6 +69,17 @@ async function stopBlock(globalConfig: GlobalConfig, name: string): Promise<bool
     currentTask: null,
     error: null,
   });
+
+  // Persist disabled state across reboots (unless preserveEnabled is set)
+  if (!options?.preserveEnabled) {
+    try {
+      const blockConfig = await loadBlockConfig(blockPath);
+      if (blockConfig.enabled !== false) {
+        blockConfig.enabled = false;
+        await saveBlockConfig(blockPath, blockConfig);
+      }
+    } catch { /* config read failure is non-critical */ }
+  }
 
   if (daemonKilled) {
     log.success(`  ${name}: stopped (daemon process killed)`);

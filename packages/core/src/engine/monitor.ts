@@ -143,13 +143,22 @@ export class Monitor {
 
         await this.logger.close();
         await this.channel.stop();
-        await savePulseState(this.blockPath, {
-            status: 'SLEEPING',
-            lastRun: new Date().toISOString(),
-            nextWakeUp: null,
-            currentTask: null,
-            error: null,
-        });
+        // Only write SLEEPING state if we still own the lock
+        let isSuperseded = false;
+        try {
+            const pidStr = await fsp.readFile(join(this.blockPath, '.lock'), 'utf8');
+            if (Number(pidStr.trim()) !== process.pid) isSuperseded = true;
+        } catch { /* proceed if no lock */ }
+
+        if (!isSuperseded) {
+            await savePulseState(this.blockPath, {
+                status: 'SLEEPING',
+                lastRun: new Date().toISOString(),
+                nextWakeUp: null,
+                currentTask: null,
+                error: null,
+            });
+        }
 
         const sessionReport = this.costTracker.getSessionReport();
         const totalReport = this.costTracker.getTotalReport();
@@ -238,7 +247,11 @@ export class Monitor {
 
         while (this.running) {
             const tools = this.getToolDefinitions();
-            const response = await adapter.converse(this.messages, tools);
+            
+            const streamCb = this.channel.streamChunk ? (chunk: string) => this.channel.streamChunk!(chunk) : undefined;
+            const response = adapter.converseStream && streamCb
+                ? await adapter.converseStream(this.messages, tools, streamCb)
+                : await adapter.converse(this.messages, tools);
 
             // System-level cost tracking — no model tokens used
             this.memory.trackUsage(response.usage);
@@ -491,26 +504,52 @@ export class Monitor {
         }
     }
 
-    /** Sync monitor identity after tool calls (in case monitor updated monitor.md). */
+    /** Sync monitor identity after tool calls (since background daemons never restart natively). */
     private async syncIdentityFromFiles(): Promise<void> {
-        const { blockPath, blockConfig } = this;
+        const { blockPath } = this;
+        let identityChanged = false;
+
+        // 1. Always prioritize reading the latest config.json (updated by tools)
+        try {
+            const configStr = await this.readFile(join(blockPath, 'config.json'));
+            const diskConfig = JSON.parse(configStr) as BlockConfig;
+            
+            // Check if identity changed in config
+            if (diskConfig.monitorName && diskConfig.monitorName !== this.monitorName) {
+                this.monitorName = diskConfig.monitorName;
+                identityChanged = true;
+            }
+            if (diskConfig.monitorEmoji && diskConfig.monitorEmoji !== this.monitorEmoji) {
+                this.monitorEmoji = diskConfig.monitorEmoji;
+                identityChanged = true;
+            }
+            
+            // Apply all config updates to the local running map
+            this.blockConfig = diskConfig;
+        } catch { /* ignore parse errors */ }
+
+        // 2. Fallback check for manual edits to monitor.md
         const content = await this.readFile(join(blockPath, 'monitor.md'));
         const nameMatch = content.match(/^\*\*Name:\*\*\s+(.+)$/m);
         const emojiMatch = content.match(/^\*\*Emoji:\*\*\s+(.+)$/m);
 
-        const newName = nameMatch?.[1]?.trim();
-        const newEmoji = emojiMatch?.[1]?.trim();
+        const mdName = nameMatch?.[1]?.trim();
+        const mdEmoji = emojiMatch?.[1]?.trim();
 
-        if (newName && newName !== '(not set — will be chosen on first run)' &&
-            (newName !== this.monitorName || newEmoji !== this.monitorEmoji)) {
-            this.monitorName = newName;
-            this.monitorEmoji = newEmoji || this.monitorEmoji;
+        if (mdName && mdName !== '(not set — will be chosen on first run)' &&
+            (mdName !== this.monitorName || (mdEmoji && mdEmoji !== this.monitorEmoji))) {
+            
+            this.monitorName = mdName;
+            this.monitorEmoji = mdEmoji || this.monitorEmoji;
+            identityChanged = true;
 
-            const updated = { ...blockConfig, monitorName: this.monitorName, monitorEmoji: this.monitorEmoji };
-            await saveBlockConfig(blockPath, updated);
-            this.blockConfig = updated;
+            // Reflect markdown-driven identity changes back into the config
+            this.blockConfig = { ...this.blockConfig, monitorName: this.monitorName, monitorEmoji: this.monitorEmoji };
+            await saveBlockConfig(blockPath, this.blockConfig);
+        }
 
-            log.monitor(this.blockConfig.name, `${this.monitorEmoji} ${this.monitorName}`, 'Identity updated.');
+        if (identityChanged) {
+            log.monitor(this.blockConfig.name, `${this.monitorEmoji} ${this.monitorName}`, 'Identity updated dynamically.');
         }
     }
 

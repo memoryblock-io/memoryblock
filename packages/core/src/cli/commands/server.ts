@@ -92,6 +92,9 @@ export async function serverStartCommand(options?: {
     log.dim(`  token: ${authToken}`);
     console.log('');
 
+    // Auto-install OS service hook quietly
+    import('./service.js').then(s => s.silentServiceInstall()).catch(() => {});
+
     // Resolve web UI static files
     let webRoot: string | undefined;
     try {
@@ -291,7 +294,7 @@ export async function shutdownCommand(): Promise<void> {
     log.dim('  Stopping all blocks...');
     try {
         const { stopCommand } = await import('./stop.js');
-        await stopCommand();
+        await stopCommand(undefined, { preserveEnabled: true });
     } catch { /* ignore */ }
 
     // 2. Stop the server
@@ -313,7 +316,12 @@ export async function restartCommand(options?: { port?: string }): Promise<void>
     // Small delay to let PID files clean up
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Start again as daemon
+    // Start server as daemon
     log.dim('\n  Starting server...');
     await serverStartCommand({ port: options?.port, daemon: true });
+
+    // Start all enabled blocks
+    log.dim('\n  Starting enabled blocks...');
+    const { startAllEnabledBlocks } = await import('./start.js');
+    await startAllEnabledBlocks();
 }

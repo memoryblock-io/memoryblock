@@ -4,11 +4,11 @@ import {
     loadGlobalConfig, loadBlockConfig, loadAuth, resolveBlockPath, isInitialized,
     saveBlockConfig, resolveBlocksDir, loadPulseState, savePulseState,
 } from '../../utils/config.js';
-import { pathExists } from '../../utils/fs.js';
-import { log } from '../logger.js';
 import { t } from '@memoryblock/locale';
 import { Monitor } from '../../engine/monitor.js';
 import { promises as fsp } from 'node:fs';
+import { pathExists } from '../../utils/fs.js';
+import { log } from '../logger.js';
 import { join } from 'node:path';
 import { PROVIDERS, PLUGINS } from '../constants.js';
 
@@ -128,8 +128,10 @@ async function setupBlockRuntimeLogs(
         // Add Telegram if configured
         const telegramToken = auth.telegram?.botToken;
         if (telegramToken) {
+            const globalConfig = await loadGlobalConfig();
             const chatId = blockConfig.channel.telegram?.chatId || auth.telegram?.chatId || '';
-            activeChannels.push(new channels.TelegramChannel(blockConfig.name, chatId));
+            const enableAlerts = globalConfig.channelAlerts ?? true;
+            activeChannels.push(new channels.TelegramChannel(blockConfig.name, chatId, enableAlerts));
         }
 
         // Add WebChannel when: daemon mode, explicit 'web' or 'multi' channel, or block config says web
@@ -580,16 +582,90 @@ async function miniOnboarding(blockConfig: any, blockPath: string, blockName: st
     return updated;
 }
 
+/**
+ * Start all enabled blocks as daemons.
+ * Skips blocks that are unconfigured (no model) or already running.
+ * Used by `mblk start` (no args) and `mblk restart`.
+ */
+export async function startAllEnabledBlocks(): Promise<void> {
+    const globalConfig = await loadGlobalConfig();
+    const blocksDir = resolveBlocksDir(globalConfig);
+
+    if (!(await pathExists(blocksDir))) {
+        log.dim('  No blocks directory found.');
+        return;
+    }
+
+    const entries = await fsp.readdir(blocksDir, { withFileTypes: true });
+    let started = 0;
+
+    for (const entry of entries) {
+        if (!entry.isDirectory() || entry.name.startsWith('_') || entry.name.startsWith('.')) continue;
+
+        const blockPath = join(blocksDir, entry.name);
+        try {
+            const blockConfig = await loadBlockConfig(blockPath);
+
+            // Skip disabled blocks
+            if (blockConfig.enabled === false) {
+                log.dim(`  ${entry.name}: disabled (skipped)`);
+                continue;
+            }
+
+            // Skip unconfigured blocks (no model set)
+            if (!blockConfig.adapter?.model) {
+                log.dim(`  ${entry.name}: not configured (skipped)`);
+                continue;
+            }
+
+            // Skip already running blocks
+            const pulse = await loadPulseState(blockPath);
+            if (pulse.status === 'ACTIVE') {
+                const lockFile = join(blockPath, '.lock');
+                try {
+                    const pidStr = await fsp.readFile(lockFile, 'utf8');
+                    const pid = parseInt(pidStr.trim(), 10);
+                    try { process.kill(pid, 0); log.dim(`  ${entry.name}: already running (PID ${pid})`); continue; } catch { /* stale */ }
+                } catch { /* no lock file */ }
+            }
+
+            // Start as daemon
+            await savePulseState(blockPath, {
+                status: 'SLEEPING',
+                lastRun: new Date().toISOString(),
+                nextWakeUp: null,
+                currentTask: null,
+                error: null,
+            });
+            const daemon = await import(DAEMON_PKG);
+            const pid = await daemon.spawnDaemon(blockConfig.name, 'multi', blockPath);
+            log.success(`  ${entry.name}: started (PID ${pid})`);
+            started++;
+        } catch (err) {
+            log.warn(`  ${entry.name}: failed to start — ${(err as Error).message}`);
+        }
+    }
+
+    if (started === 0) {
+        log.dim('  No enabled blocks to start.');
+    } else {
+        log.dim(`\n  ${started} block(s) started as daemons.`);
+    }
+}
+
 export async function startCommand(blockName?: string, options?: { channel?: string; daemon?: boolean }): Promise<void> {
     if (!(await isInitialized())) {
         throw new Error(t.general.notInitialized);
     }
 
     if (!blockName) {
-        log.brand('Starting all blocks...');
-        log.warn('Multi-block start not yet implemented. Specify a block name: mblk start <name>');
+        log.brand('Starting all blocks...\n');
+        await startAllEnabledBlocks();
         return;
     }
+
+    // Auto-install OS service hook quietly
+    import('./service.js').then(s => s.silentServiceInstall()).catch(() => {});
 
     const globalConfig = await loadGlobalConfig();
     const blockPath = resolveBlockPath(globalConfig, blockName);
@@ -671,66 +747,97 @@ export async function startCommand(blockName?: string, options?: { channel?: str
         blockConfig = await miniOnboarding(blockConfig, blockPath, blockName, auth, globalConfig);
     }
 
-    log.brand(`${blockConfig.name}\n`);
-    const { adapter, registry, channel } = await setupBlockRuntimeLogs(blockConfig, blockPath, auth, options, channelType);
+    // Mark block as enabled (persists across reboots)
+    blockConfig.enabled = true;
+    await saveBlockConfig(blockPath, blockConfig);
 
-    if (options?.daemon) {
+    // ─── AM I THE DAEMON CHILD? ───────────────────────────
+    if (process.env.MBLK_IS_DAEMON === '1') {
+        let shuttingDown = false;
+        let monitor: any = null;
+        
+        const shutdown = async () => {
+            if (shuttingDown) return;
+            shuttingDown = true;
+            if (monitor) {
+                try { await monitor.stop(); } catch { /* ignore */ }
+            }
+            try {
+                const lockFile = join(blockPath, '.lock');
+                const pidStr = await fsp.readFile(lockFile, 'utf8');
+                if (Number(pidStr.trim()) === process.pid) {
+                    await fsp.unlink(lockFile);
+                }
+            } catch { /* ignore */ }
+            process.exit(0);
+        };
+
+        process.on('SIGINT', shutdown);
+        process.on('SIGTERM', shutdown);
+        process.on('uncaughtException', async (err) => {
+            if (shuttingDown) return;
+            log.error(t.errors.unexpected(err.message));
+            await fsp.writeFile(join(blockPath, 'daemon-debug-error.log'), err.stack || err.message);
+            await shutdown();
+        });
+        process.on('unhandledRejection', async (reason) => {
+            if (shuttingDown) return;
+            log.error(t.errors.unexpected(String(reason)));
+            const stack = (reason as Error)?.stack || String(reason);
+            await fsp.writeFile(join(blockPath, 'daemon-debug-error.log'), stack);
+            await shutdown();
+        });
+
         try {
-            // Reset pulse so the daemon child doesn't see stale ACTIVE status
-            await savePulseState(blockPath, {
-                status: 'SLEEPING',
-                lastRun: new Date().toISOString(),
-                nextWakeUp: null,
-                currentTask: null,
-                error: null,
-            });
-            const daemon = await import(DAEMON_PKG);
-            const pid = await daemon.spawnDaemon(blockConfig.name, channelType, blockPath);
-            log.success(`Daemon spawned successfully! PID: ${pid}`);
-            return;
+            console.log("TRACE: Before setupBlockRuntimeLogs");
+            const { adapter, registry, channel } = await setupBlockRuntimeLogs(blockConfig, blockPath, auth, options, channelType);
+            console.log("TRACE: After setupBlockRuntimeLogs", { hasAdapter: !!adapter, hasRegistry: !!registry, hasChannel: !!channel });
+            if (!adapter || !registry || !channel) return;
+
+            // Create and start the monitor in the background
+            console.log("TRACE: Creating monitor");
+            monitor = new Monitor({ blockPath, blockConfig, adapter, registry, channel });
+            console.log("TRACE: Starting monitor");
+            await monitor.start();
+            console.log("TRACE: Monitor started");
         } catch (err) {
-            throw new Error(`Failed to spawn daemon: ${(err as Error).message}`);
+            console.log("TRACE: Caught error", (err as Error).message);
+            log.error(`Daemon init failed: ${(err as Error).message}`);
+            await fsp.writeFile(join(blockPath, 'daemon-debug-error.log'), (err as Error).stack || (err as Error).message);
+            process.exit(1);
         }
+        console.log("TRACE: End of MBLK_IS_DAEMON block");
+        return; // The daemon runs indefinitely here
     }
 
-    if (!adapter || !registry || !channel) return;
-
-    // Create and start the monitor
-    const monitor = new Monitor({ blockPath, blockConfig, adapter, registry, channel });
-
-    let shuttingDown = false;
-    const shutdown = async () => {
-        if (shuttingDown) return;
-        shuttingDown = true;
-        console.log(''); // newline after ^C
-        log.system(blockConfig.name, t.monitor.shuttingDown);
-        await monitor.stop();
-        // Clean up lock file
-        try { await fsp.unlink(join(blockPath, '.lock')); } catch { /* ignore */ }
-        process.exit(0);
-    };
-
-    process.on('SIGINT', shutdown);
-    process.on('SIGTERM', shutdown);
-
-    // Global safety net — catch unhandled errors and shut down cleanly
-    // instead of crashing with raw stack traces (e.g. Telegram 409 conflicts)
-    process.on('uncaughtException', async (err) => {
-        if (shuttingDown) return;
-        log.error(t.errors.unexpected(err.message));
-        await shutdown();
-    });
-
-    process.on('unhandledRejection', async (reason) => {
-        if (shuttingDown) return;
-        const msg = reason instanceof Error ? reason.message : String(reason);
-        log.error(t.errors.unexpected(msg));
-        await shutdown();
-    });
-
+    // ─── I AM THE PARENT CLI ──────────────────────────────
     try {
-        await monitor.start();
+        // Reset pulse so the daemon child doesn't see stale ACTIVE status
+        await savePulseState(blockPath, {
+            status: 'SLEEPING',
+            lastRun: new Date().toISOString(),
+            nextWakeUp: null,
+            currentTask: null,
+            error: null,
+        });
+        const daemon = await import(DAEMON_PKG);
+        const pid = await daemon.spawnDaemon(blockConfig.name, channelType, blockPath);
+        
+        if (options?.daemon) {
+            log.brand(`${blockConfig.name}\n`);
+            log.success(`Daemon spawned successfully! PID: ${pid}`);
+            return;
+        }
+
+        // Always background the daemon, then attach CLI natively
+        log.brand(`${blockConfig.name}\n`);
+        log.success(`Daemon spawned (PID ${pid}). Attaching CLI...\n`);
+        
+        // Let daemon init chat.json and WebChannel before tailing
+        await new Promise(r => setTimeout(r, 1500));
+        await setupBlockRuntimeLogs(blockConfig, blockPath, auth, options, channelType);
+        await attachCLIToRunningBlock(blockName, blockPath);
     } catch (err) {
-        throw new Error(`Monitor failed: ${(err as Error).message}`);
+        throw new Error(`Failed to spawn daemon: ${(err as Error).message}`);
     }
 }

@@ -63,12 +63,15 @@ export const BlockConfigSchema = z.object({
     // Monitor identity — set by the monitor during its first onboarding session
     monitorName: z.string().optional(),
     monitorEmoji: z.string().optional(),
+    // Persistent state flag — blocks with enabled:true auto-start on boot/restart
+    enabled: z.boolean().default(true),
 });
 
 // ===== Global Config =====
 export const GlobalConfigSchema = z.object({
     language: z.string().default('en'),
     blocksDir: z.string().default('./blocks'),
+    channelAlerts: z.boolean().default(true),
     defaults: z.object({
         adapter: AdapterConfigSchema.default({}),
         memory: MemoryConfigSchema.default({}),

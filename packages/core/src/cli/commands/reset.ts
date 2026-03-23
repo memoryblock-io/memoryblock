@@ -37,8 +37,8 @@ export async function resetCommand(blockName: string, options: { hard?: boolean 
 
     log.dim(`  resetting ${blockName}${options.hard ? ' (hard)' : ''}...`);
 
-    // Light reset: memory, pulse, costs, session
-    const filesToReset = ['memory.md', 'pulse.json', 'costs.json', 'session.json'];
+    // Light reset: memory, pulse, costs, session, chat.json, and logs directory
+    const filesToReset = ['memory.md', 'pulse.json', 'costs.json', 'session.json', 'chat.json'];
 
     for (const file of filesToReset) {
         const filePath = join(blockPath, file);
@@ -50,7 +50,7 @@ export async function resetCommand(blockName: string, options: { hard?: boolean 
                 await fsp.writeFile(filePath, JSON.stringify(FILE_TEMPLATES.PULSE_JSON, null, 4), 'utf-8');
             } else if (file === 'costs.json') {
                 await fsp.writeFile(filePath, JSON.stringify(FILE_TEMPLATES.COSTS_JSON, null, 4), 'utf-8');
-            } else if (file === 'session.json') {
+            } else if (file === 'session.json' || file === 'chat.json') {
                 await fsp.unlink(filePath);
             }
             log.dim(`  ✓ ${file}`);
@@ -59,20 +59,20 @@ export async function resetCommand(blockName: string, options: { hard?: boolean 
         }
     }
 
-    // Hard reset: wipe logs/, monitor.md, and monitor identity from config
-    if (options.hard) {
-        const logsDir = join(blockPath, 'logs');
-        try {
-            const files = await fsp.readdir(logsDir);
-            for (const file of files) {
-                await fsp.unlink(join(logsDir, file));
-            }
-            log.dim(`  ✓ logs/ wiped (${files.length} files)`);
-        } catch {
-            // Logs dir might not exist or be empty
+    // Wipe logs continuously for both soft and hard resets
+    const logsDir = join(blockPath, 'logs');
+    try {
+        const files = await fsp.readdir(logsDir);
+        for (const file of files) {
+            await fsp.unlink(join(logsDir, file));
         }
+        log.dim(`  ✓ logs/ wiped (${files.length} files)`);
+    } catch {
+        // Logs dir might not exist or be empty
+    }
 
-        // Reset monitor.md to blank
+    // Hard reset: wipe monitor.md and monitor identity from config
+    if (options.hard) {
         const monitorPath = join(blockPath, 'monitor.md');
         try {
             await fsp.writeFile(monitorPath, FILE_TEMPLATES.MONITOR_MD(blockName), 'utf-8');
@@ -90,7 +90,7 @@ export async function resetCommand(blockName: string, options: { hard?: boolean 
             log.dim('  ✓ monitor identity cleared');
         } catch { /* ignore */ }
     } else {
-        log.dim('  ℹ logs/, monitor.md, and identity preserved (use --hard to wipe)');
+        log.dim('  ℹ monitor.md and identity preserved (use --hard to wipe)');
     }
 
     console.log(`\n${chalk.green(`✓ ${blockName} reset.`)}`);

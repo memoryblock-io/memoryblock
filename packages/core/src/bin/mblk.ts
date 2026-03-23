@@ -13,6 +13,7 @@ import { addCommand, removeCommand } from '../cli/commands/plugins.js';
 import { deleteCommand, restoreCommand } from '../cli/commands/delete.js';
 import { permissionsCommand } from '../cli/commands/permissions.js';
 import { pluginSettingsCommand } from '../cli/commands/plugin-settings.js';
+import { serviceInstallCommand, serviceUninstallCommand, serviceStatusCommand } from '../cli/commands/service.js';
 import { getVersion, DEFAULT_PORT } from '../cli/constants.js';
 
 (async () => {
@@ -231,6 +232,49 @@ server
             process.exit(0);
         }
     });
+
+// ===== Service Subcommand Group =====
+
+const service = program
+    .command('service')
+    .description('Manage OS-level auto-start (launchd/systemd).');
+
+service
+    .command('install')
+    .description('Register memoryblock to start on boot/login.')
+    .action(async () => {
+        try {
+            await serviceInstallCommand();
+        } catch (err) {
+            log.error((err as Error).message);
+            process.exit(0);
+        }
+    });
+
+service
+    .command('uninstall')
+    .description('Remove memoryblock from system auto-start.')
+    .action(async () => {
+        try {
+            await serviceUninstallCommand();
+        } catch (err) {
+            log.error((err as Error).message);
+            process.exit(0);
+        }
+    });
+
+service
+    .command('status')
+    .description('Check if the auto-start service is installed.')
+    .action(async () => {
+        try {
+            await serviceStatusCommand();
+        } catch (err) {
+            log.error((err as Error).message);
+            process.exit(0);
+        }
+    });
+
 // ===== Lifecycle Commands =====
 
 program

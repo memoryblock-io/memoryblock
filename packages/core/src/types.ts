@@ -62,11 +62,14 @@ export interface BlockConfig {
     permissions: PermissionsConfig;
     monitorName?: string;
     monitorEmoji?: string;
+    /** Persistent flag — blocks with enabled:true auto-start on boot/restart */
+    enabled?: boolean;
 }
 
 export interface GlobalConfig {
     language?: string;
     blocksDir: string;
+    channelAlerts?: boolean;
     defaults: {
         adapter: AdapterConfig;
         memory: MemoryConfig;
@@ -187,11 +190,13 @@ export interface LLMAdapter {
     readonly provider: string;
     readonly model: string;
     converse(messages: LLMMessage[], tools?: ToolDefinition[]): Promise<LLMResponse>;
+    converseStream?(messages: LLMMessage[], tools?: ToolDefinition[], onChunk?: (text: string) => void): Promise<LLMResponse>;
 }
 
 export interface Channel {
     readonly name: string;
     send(message: ChannelMessage): Promise<void>;
+    streamChunk?(chunk: string): Promise<void>;
     onMessage(handler: (message: ChannelMessage) => void): void;
     requestApproval(request: ApprovalRequest): Promise<boolean>;
     start(): Promise<void>;
