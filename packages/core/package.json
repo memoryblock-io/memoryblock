@@ -1,0 +1,40 @@
+{
+  "name": "memoryblock",
+  "version": "0.1.0-beta",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "mblk": "./dist/bin/mblk.js",
+    "memoryblock": "./dist/bin/mblk.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch"
+  },
+  "dependencies": {
+    "@memoryblock/daemon": "workspace:*",
+    "@memoryblock/adapters": "workspace:*",
+    "@memoryblock/channels": "workspace:*",
+    "@memoryblock/tools": "workspace:*",
+    "@memoryblock/api": "workspace:*",
+    "@memoryblock/web": "workspace:*",
+    "@memoryblock/locale": "workspace:*",
+    "@memoryblock/plugin-installer": "workspace:*",
+    "@memoryblock/plugin-agents": "workspace:*",
+    "@clack/prompts": "^1.1.0",
+    "commander": "^13.0.0",
+    "chalk": "^5.4.0",
+    "zod": "^3.24.0"
+  },
+  "optionalDependencies": {
+    "@memoryblock/plugin-web-search": "workspace:*"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
