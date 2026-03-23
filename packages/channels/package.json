@@ -1,0 +1,19 @@
+{
+  "name": "@memoryblock/channels",
+  "version": "0.1.0-beta",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "chalk": "^5.4.0",
+    "memoryblock": "workspace:*",
+    "grammy": "^1.35.0"
+  }
+}
