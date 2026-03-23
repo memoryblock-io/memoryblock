@@ -10,6 +10,7 @@ import {
     type ToolResultContentBlock,
     type SystemContentBlock,
     type ConverseCommandOutput,
+    ConverseStreamCommand,
 } from '@aws-sdk/client-bedrock-runtime';
 import { NodeHttpHandler } from '@smithy/node-http-handler';
 import type {
@@ -120,6 +121,99 @@ export class BedrockAdapter implements LLMAdapter {
 
         const stopReason = this.mapStopReason(response.stopReason);
         const message = this.parseResponseMessage(response.output.message);
+
+        return { message, usage, stopReason };
+    }
+
+    async converseStream(messages: LLMMessage[], tools?: ToolDefinition[], onChunk?: (text: string) => void): Promise<LLMResponse> {
+        if (!this.model) {
+            throw new Error('No model configured for this block. Run `mblk start <block>` to select one.');
+        }
+
+        const client = getClient(
+            this.region,
+            this.accessKeyId || undefined,
+            this.secretAccessKey || undefined,
+        );
+
+        const systemMessages = messages.filter((m) => m.role === 'system');
+        const conversationMessages = messages.filter((m) => m.role !== 'system');
+        const system: SystemContentBlock[] = systemMessages.map((m) => ({ text: m.content || '' }));
+
+        const bedrockMessages = this.convertMessages(conversationMessages);
+        const toolConfig = tools?.length ? this.convertTools(tools) : undefined;
+
+        const command = new ConverseStreamCommand({
+            modelId: this.model,
+            messages: bedrockMessages,
+            system: system.length > 0 ? system : undefined,
+            toolConfig,
+            inferenceConfig: {
+                maxTokens: this.maxTokens,
+            },
+        });
+
+        const response = await client.send(command);
+
+        let textContent = '';
+        let stopReason: StopReason = 'end_turn';
+        const usage: TokenUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+        const toolCallsMap: Record<string, { name: string; input: string }> = {};
+
+        let activeToolUseId = '';
+
+        if (response.stream) {
+            for await (const chunk of response.stream) {
+                if (chunk.contentBlockDelta) {
+                    if (chunk.contentBlockDelta.delta?.text) {
+                        const text = chunk.contentBlockDelta.delta.text;
+                        textContent += text;
+                        if (onChunk) onChunk(text);
+                    } else if (chunk.contentBlockDelta.delta?.toolUse) {
+                        const inputPart = chunk.contentBlockDelta.delta.toolUse.input || '';
+                        if (activeToolUseId && toolCallsMap[activeToolUseId]) {
+                            toolCallsMap[activeToolUseId].input += inputPart;
+                        }
+                    }
+                } else if (chunk.contentBlockStart) {
+                    if (chunk.contentBlockStart.start?.toolUse) {
+                        const c = chunk.contentBlockStart.start.toolUse;
+                        if (c.toolUseId && c.name) {
+                            activeToolUseId = c.toolUseId;
+                            toolCallsMap[c.toolUseId] = { name: c.name, input: '' };
+                        }
+                    }
+                } else if (chunk.messageStop) {
+                    stopReason = this.mapStopReason(chunk.messageStop.stopReason);
+                } else if (chunk.metadata) {
+                    if (chunk.metadata.usage) {
+                        usage.inputTokens = chunk.metadata.usage.inputTokens || 0;
+                        usage.outputTokens = chunk.metadata.usage.outputTokens || 0;
+                        usage.totalTokens = chunk.metadata.usage.totalTokens || 0;
+                    }
+                }
+            }
+        }
+
+        const toolCalls: ToolCall[] = Object.entries(toolCallsMap).map(([id, tc]) => {
+            let parsedInput = {};
+            try {
+                parsedInput = tc.input ? JSON.parse(tc.input) : {};
+            } catch {
+                // handle partial json
+            }
+            return {
+                id,
+                name: tc.name,
+                input: parsedInput as Record<string, unknown>
+            };
+        });
+
+        const message: LLMMessage = {
+            role: 'assistant',
+            content: textContent || undefined,
+            toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+        };
 
         return { message, usage, stopReason };
     }
