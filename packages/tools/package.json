@@ -1,0 +1,17 @@
+{
+  "name": "@memoryblock/tools",
+  "version": "0.1.0-beta",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "memoryblock": "workspace:*"
+  }
+}
