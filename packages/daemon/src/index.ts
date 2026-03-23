@@ -9,17 +9,20 @@ import { promises as fsp } from 'node:fs';
 export async function spawnDaemon(blockName: string, _channel: string, blockPath: string): Promise<number> {
     const scriptPath = process.argv[1];
 
+    const out = await fsp.open(join(blockPath, 'daemon-debug.log'), 'a');
+    
     // Always use 'multi' so the daemon initializes ALL available channels
     // (web, telegram, etc.) and auto-routes messages via MultiChannelManager
     const child = spawn(process.execPath, [
         scriptPath, 'start', blockName, '--channel', 'multi'
     ], {
         detached: true,
-        stdio: 'ignore', // Fully detached, no TTY hooks
-        env: process.env // Preserve authentication keys
+        stdio: ['ignore', out.fd, out.fd], // Pipe to debug log
+        env: { ...process.env, MBLK_IS_DAEMON: '1' } // Preserve authentication keys and mark as daemon
     });
 
     child.unref(); // Prevent parent from waiting for child
+    await out.close();
 
     if (child.pid) {
         await fsp.writeFile(join(blockPath, 'daemon.pid'), child.pid.toString());
