@@ -58,8 +58,7 @@ export async function addCommand(pluginId: string): Promise<void> {
             log.dim(`  requires: ${result.plugin.requiresAuth.join(', ')}`);
         }
     } else {
-        log.error(result.message);
-        process.exit(1);
+        log.warn(result.message);
     }
 }
 
