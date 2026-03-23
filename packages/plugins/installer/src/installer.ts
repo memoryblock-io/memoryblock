@@ -1,7 +1,7 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { execSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 
 /** Settings field types supported in plugin manifests. */
 export interface SettingsField {
@@ -73,7 +73,7 @@ export class PluginInstaller {
      * 1. npm install the package
      * 2. Add tool names to the block's config.json if provided
      */
-    async install(pluginId: string, options?: { blockConfigPath?: string; cwd?: string }): Promise<{
+    async install(pluginId: string, options?: { blockConfigPath?: string; cwd?: string; onLog?: (chunk: string) => void }): Promise<{
         success: boolean;
         message: string;
         plugin?: PluginEntry;
@@ -90,10 +90,19 @@ export class PluginInstaller {
         // Install npm package
         const cwd = options?.cwd || process.cwd();
         try {
-            execSync(`npm install ${plugin.package}@${plugin.version}`, {
-                cwd,
-                stdio: 'pipe',
-                timeout: 60000,
+            await new Promise<void>((resolve, reject) => {
+                const child = spawn('npm', ['install', `${plugin.package}@${plugin.version}`], { cwd, shell: true });
+                child.stdout.on('data', data => options?.onLog?.(data.toString()));
+                child.stderr.on('data', data => options?.onLog?.(data.toString()));
+                
+                let done = false;
+                child.on('error', err => { if (!done) { done = true; reject(err); } });
+                child.on('close', code => {
+                    if (done) return;
+                    done = true;
+                    if (code === 0) resolve();
+                    else reject(new Error(`Exit code ${code}`));
+                });
             });
         } catch (err) {
             return {
@@ -135,7 +144,7 @@ export class PluginInstaller {
      * 2. npm uninstall the package
      * 3. Remove tool names from block config if provided
      */
-    async remove(pluginId: string, options?: { blockConfigPath?: string; cwd?: string }): Promise<{
+    async remove(pluginId: string, options?: { blockConfigPath?: string; cwd?: string; onLog?: (chunk: string) => void }): Promise<{
         success: boolean;
         message: string;
     }> {
@@ -150,13 +159,23 @@ export class PluginInstaller {
 
         const cwd = options?.cwd || process.cwd();
         try {
-            execSync(`npm uninstall ${plugin.package}`, {
-                cwd,
-                stdio: 'pipe',
-                timeout: 60000,
+            await new Promise<void>((resolve, reject) => {
+                const child = spawn('npm', ['uninstall', plugin.package], { cwd, shell: true });
+                child.stdout.on('data', data => options?.onLog?.(data.toString()));
+                child.stderr.on('data', data => options?.onLog?.(data.toString()));
+                
+                let done = false;
+                child.on('error', err => { if (!done) { done = true; reject(err); } });
+                child.on('close', code => {
+                    if (done) return;
+                    done = true;
+                    if (code === 0) resolve();
+                    else reject(new Error(`Exit code ${code}`));
+                });
             });
         } catch {
             // Uninstall failure is non-critical
+            options?.onLog?.('\nNote: npm uninstall encountered an error, but cleanup will proceed.\n');
         }
 
         // Clean up block config
