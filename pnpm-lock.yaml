@@ -45,6 +45,9 @@ importers:
 
   packages/api:
     dependencies:
+      '@memoryblock/plugin-installer':
+        specifier: workspace:*
+        version: link:../plugins/installer
       memoryblock:
         specifier: workspace:*
         version: link:../core
