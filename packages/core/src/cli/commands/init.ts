@@ -3,12 +3,10 @@ import chalk from 'chalk';
 import { ensureDir, writeJson } from '../../utils/fs.js';
 import {
   getWsRoot, getConfigPath, getAuthPath, isInitialized,
-  resolveBlockPath, saveBlockConfig, savePulseState,
 } from '../../utils/config.js';
-import { GlobalConfigSchema, BlockConfigSchema, PulseStateSchema } from '../../schemas.js';
+import { GlobalConfigSchema } from '../../schemas.js';
 import { log } from '../logger.js';
-import { join } from 'node:path';
-import { FILE_TEMPLATES } from '../../engine/prompts.js';
+
 import { PROVIDERS, CHANNELS, PLUGINS, PROVIDER_AUTH, CHANNEL_AUTH } from '../constants.js';
 
 // Brand accent

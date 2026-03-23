@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "chalk": "^5.4.0",
-    "memoryblock": "workspace:*",
-    "grammy": "^1.35.0"
+    "grammy": "^1.35.0",
+    "memoryblock": "workspace:*"
   }
 }

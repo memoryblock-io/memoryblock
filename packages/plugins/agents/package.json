@@ -14,8 +14,8 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "memoryblock": "workspace:*",
     "@memoryblock/tools": "workspace:*",
-    "@memoryblock/adapters": "workspace:*"
+    "@memoryblock/adapters": "workspace:*",
+    "memoryblock": "workspace:*"
   }
 }
