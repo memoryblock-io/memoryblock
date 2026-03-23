@@ -13,13 +13,15 @@ export class TelegramChannel implements Channel {
     private bot: Bot | null = null;
     private chatId: string;
     private blockName: string;
+    private enableAlerts: boolean;
     private messageHandler: ((message: ChannelMessage) => void) | null = null;
     private pendingApprovals = new Map<string, (approved: boolean) => void>();
     private typingInterval: ReturnType<typeof setInterval> | null = null;
 
-    constructor(blockName: string, chatId: string) {
+    constructor(blockName: string, chatId: string, enableAlerts: boolean = true) {
         this.blockName = blockName;
         this.chatId = chatId;
+        this.enableAlerts = enableAlerts;
     }
 
     async send(message: ChannelMessage): Promise<void> {
@@ -32,7 +34,7 @@ export class TelegramChannel implements Channel {
         if (message.isSystem) {
             text = `_${this.escapeMarkdown(message.content)}_`;
         } else {
-            text = `${this.escapeMarkdown(message.blockName)} / *${this.escapeMarkdown(message.monitorName)}*\n\n${message.content}`;
+            text = `*${this.escapeMarkdown(message.monitorName)}* :: ${this.escapeMarkdown(message.blockName)}\n\n${message.content}`;
         }
 
         // Telegram has a 4096 char limit per message
@@ -161,8 +163,7 @@ export class TelegramChannel implements Channel {
         // Wrap in error handling to catch polling-level failures (e.g. 409 conflict)
         this.bot.start({
             onStart: () => {
-                // Announce online
-                if (this.bot && this.chatId) {
+                if (this.enableAlerts && this.bot && this.chatId) {
                     this.bot.api.sendMessage(this.chatId, `_${this.escapeMarkdown(t.channels.telegram.isOnline(this.blockName))}_`, { parse_mode: 'Markdown' }).catch(() => {});
                 }
             },
@@ -179,10 +180,11 @@ export class TelegramChannel implements Channel {
     async stop(): Promise<void> {
         if (this.bot) {
             this.stopTyping();
-            // Announce going offline
-            try {
-                await this.bot.api.sendMessage(this.chatId, `_${this.escapeMarkdown(t.channels.telegram.isOffline(this.blockName))}_`, { parse_mode: 'Markdown' });
-            } catch { /* ignore — best effort */ }
+            if (this.enableAlerts) {
+                try {
+                    await this.bot.api.sendMessage(this.chatId, `_${this.escapeMarkdown(t.channels.telegram.isOffline(this.blockName))}_`, { parse_mode: 'Markdown' });
+                } catch { /* ignore */ }
+            }
             await this.bot.stop();
             this.bot = null;
         }
@@ -225,30 +227,36 @@ export class TelegramChannel implements Channel {
         }
     }
 
-    /** Split text into chunks at sentence boundaries for natural streaming. */
+    /** Split text into chunks at sentence boundaries or natural breaking points for natural streaming without modifying characters. */
     private splitIntoChunks(text: string): string[] {
         const chunks: string[] = [];
-        // Split at sentence endings, keeping the delimiter
-        const sentences = text.split(/(?<=[.!?\n])\s+/);
-        let current = '';
-
-        for (const sentence of sentences) {
-            current += (current ? ' ' : '') + sentence;
-            // Emit chunk when we have enough content (~50+ chars)
-            if (current.length >= 50) {
-                chunks.push(current);
-                current = '';
+        let i = 0;
+        const minSize = 40;
+        
+        while (i < text.length) {
+            let end = i + minSize;
+            if (end >= text.length) {
+                chunks.push(text.slice(i));
+                break;
             }
-        }
-        if (current) {
-            // Merge last small chunk with previous to avoid tiny final edits
-            if (chunks.length > 0 && current.length < 40) {
-                chunks[chunks.length - 1] += ' ' + current;
-            } else {
-                chunks.push(current);
+            
+            // Try to find a nice breaking point (space, newline) without consuming it
+            while (end < text.length) {
+                const char = text[end];
+                if (char === ' ' || char === '\n') {
+                    end++; // include the delimiter in the current chunk
+                    break;
+                }
+                end++;
+                
+                // If we get too big without finding a space (e.g. a long URL), just cut it
+                if (end - i > 120) break;
             }
+            chunks.push(text.slice(i, end));
+            i = end;
         }
-        return chunks.length > 0 ? chunks : [text];
+        
+        return chunks;
     }
 
     private sleep(ms: number): Promise<void> {

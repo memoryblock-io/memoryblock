@@ -87,6 +87,19 @@ export class WebChannel implements Channel {
         await this.pendingWrite;
     }
 
+    async streamChunk(chunk: string): Promise<void> {
+        try {
+            const port = process.env.MBLK_PORT || 8420;
+            await fetch(`http://127.0.0.1:${port}/api/blocks/${this.blockName}/stream`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chunk })
+            });
+        } catch {
+            // Ignore errors if API server is not running or unreachable
+        }
+    }
+
     async requestApproval(req: ApprovalRequest): Promise<boolean> {
         // Not supporting dynamic tool approval over WebChat natively yet
         await this.send({

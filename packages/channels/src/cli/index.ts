@@ -57,6 +57,7 @@ export class CLIChannel implements Channel {
             const header = `${THEME.brandBg(` ${name} `)}${name !== message.blockName ? ` ${THEME.system(message.blockName)}` : ''}`;
             console.log(header);
             console.log('');
+            console.log('');
 
             const formatted = this.formatContent(message.content);
             const columns = process.stdout.columns || 80;
