@@ -1,7 +1,8 @@
 {
   "name": "@memoryblock/plugin-aws",
-  "version": "0.1.0-beta",
+  "version": "0.1.1-beta",
   "type": "module",
+  "description": "Official plugin for AWS integrations in memoryblock.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -15,5 +16,39 @@
     "@aws-sdk/client-bedrock-runtime": "^3.700.0",
     "@smithy/node-http-handler": "^4.0.0",
     "memoryblock": "workspace:*"
-  }
+  },
+  "keywords": [
+    "memoryblock",
+    "mblk",
+    "ai-agent",
+    "assistants",
+    "agents",
+    "automation",
+    "multi-agent",
+    "agentic-framework",
+    "plugin",
+    "aws",
+    "bedrock",
+    "cloud",
+    "s3",
+    "lambda",
+    "dynamodb",
+    "s3",
+    "iam",
+    "access"
+  ],
+  "author": {
+    "name": "Ghazi",
+    "url": "https://mgks.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memoryblock-io/memoryblock.git"
+  },
+  "bugs": {
+    "url": "https://github.com/memoryblock-io/memoryblock/issues"
+  },
+  "homepage": "https://memoryblock.io",
+  "funding": "https://github.com/sponsors/mgks",
+  "license": "MIT"
 }

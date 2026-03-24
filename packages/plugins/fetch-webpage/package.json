@@ -1,7 +1,8 @@
 {
   "name": "@memoryblock/plugin-fetch-webpage",
-  "version": "0.1.0-beta",
+  "version": "0.1.1-beta",
   "type": "module",
+  "description": "Official plugin for fetching and parsing webpage content.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -13,5 +14,37 @@
   },
   "dependencies": {
     "memoryblock": "workspace:*"
-  }
+  },
+  "keywords": [
+    "memoryblock",
+    "mblk",
+    "ai-agent",
+    "assistants",
+    "agents",
+    "automation",
+    "multi-agent",
+    "agentic-framework",
+    "plugin",
+    "fetch",
+    "html",
+    "web",
+    "browser",
+    "pdf",
+    "markdown",
+    "url"
+  ],
+  "author": {
+    "name": "Ghazi",
+    "url": "https://mgks.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memoryblock-io/memoryblock.git"
+  },
+  "bugs": {
+    "url": "https://github.com/memoryblock-io/memoryblock/issues"
+  },
+  "homepage": "https://memoryblock.io",
+  "funding": "https://github.com/sponsors/mgks",
+  "license": "MIT"
 }

@@ -1,7 +1,8 @@
 {
   "name": "@memoryblock/tools",
-  "version": "0.1.0-beta",
+  "version": "0.1.1-beta",
   "type": "module",
+  "description": "Standard tool definitions and schemas for memoryblock.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -13,5 +14,38 @@
   },
   "dependencies": {
     "memoryblock": "workspace:*"
-  }
+  },
+  "keywords": [
+    "memoryblock",
+    "mblk",
+    "ai-agent",
+    "assistants",
+    "agents",
+    "automation",
+    "multi-agent",
+    "agentic-framework",
+    "tools",
+    "functions",
+    "schemas",
+    "file",
+    "filesystem",
+    "command-line",
+    "command-line-tools",
+    "command-line-functions",
+    "command-line-schemas"
+  ],
+  "author": {
+    "name": "Ghazi",
+    "url": "https://mgks.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memoryblock-io/memoryblock.git"
+  },
+  "bugs": {
+    "url": "https://github.com/memoryblock-io/memoryblock/issues"
+  },
+  "homepage": "https://memoryblock.io",
+  "funding": "https://github.com/sponsors/mgks",
+  "license": "MIT"
 }

@@ -1,7 +1,8 @@
 {
   "name": "@memoryblock/plugin-agents",
-  "version": "0.1.0-beta",
+  "version": "0.1.1-beta",
   "type": "module",
+  "description": "Official plugin for orchestrating secondary AI agents in memoryblock.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -17,5 +18,42 @@
     "@memoryblock/tools": "workspace:*",
     "@memoryblock/adapters": "workspace:*",
     "memoryblock": "workspace:*"
-  }
+  },
+  "keywords": [
+    "memoryblock",
+    "mblk",
+    "ai-agent",
+    "assistants",
+    "agents",
+    "automation",
+    "multi-agent",
+    "agentic-framework",
+    "plugin",
+    "autonomous",
+    "orchestration",
+    "multi-agents",
+    "openai",
+    "anthropic",
+    "gemini",
+    "groq",
+    "deepseek",
+    "ollama",
+    "chatgpt",
+    "bedrock",
+    "gpt"
+  ],
+  "author": {
+    "name": "Ghazi",
+    "url": "https://mgks.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memoryblock-io/memoryblock.git"
+  },
+  "bugs": {
+    "url": "https://github.com/memoryblock-io/memoryblock/issues"
+  },
+  "homepage": "https://memoryblock.io",
+  "funding": "https://github.com/sponsors/mgks",
+  "license": "MIT"
 }

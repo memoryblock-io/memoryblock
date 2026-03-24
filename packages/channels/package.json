@@ -1,7 +1,8 @@
 {
   "name": "@memoryblock/channels",
-  "version": "0.1.0-beta",
+  "version": "0.1.1-beta",
   "type": "module",
+  "description": "Communication channel integrations for memoryblock.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -15,5 +16,37 @@
     "chalk": "^5.4.0",
     "grammy": "^1.35.0",
     "memoryblock": "workspace:*"
-  }
+  },
+  "keywords": [
+    "memoryblock",
+    "mblk",
+    "ai-agent",
+    "assistants",
+    "agents",
+    "automation",
+    "multi-agent",
+    "agentic-framework",
+    "channels",
+    "cli",
+    "telegram",
+    "discord",
+    "slack",
+    "whatsapp",
+    "web",
+    "webhook"
+  ],
+  "author": {
+    "name": "Ghazi",
+    "url": "https://mgks.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memoryblock-io/memoryblock.git"
+  },
+  "bugs": {
+    "url": "https://github.com/memoryblock-io/memoryblock/issues"
+  },
+  "homepage": "https://memoryblock.io",
+  "funding": "https://github.com/sponsors/mgks",
+  "license": "MIT"
 }

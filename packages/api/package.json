@@ -1,7 +1,8 @@
 {
   "name": "@memoryblock/api",
-  "version": "0.1.0-beta",
+  "version": "0.1.1-beta",
   "type": "module",
+  "description": "Core API server for memoryblock daemon and dashboard.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -17,5 +18,33 @@
   "dependencies": {
     "@memoryblock/plugin-installer": "workspace:*",
     "memoryblock": "workspace:*"
-  }
+  },
+  "keywords": [
+    "memoryblock",
+    "mblk",
+    "ai-agent",
+    "assistants",
+    "agents",
+    "automation",
+    "multi-agent",
+    "agentic-framework",
+    "api",
+    "server",
+    "daemon",
+    "webhooks"
+  ],
+  "author": {
+    "name": "Ghazi",
+    "url": "https://mgks.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memoryblock-io/memoryblock.git"
+  },
+  "bugs": {
+    "url": "https://github.com/memoryblock-io/memoryblock/issues"
+  },
+  "homepage": "https://memoryblock.io",
+  "funding": "https://github.com/sponsors/mgks",
+  "license": "MIT"
 }

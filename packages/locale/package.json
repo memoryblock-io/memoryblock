@@ -1,8 +1,8 @@
 {
   "name": "@memoryblock/locale",
-  "version": "0.1.0-beta",
-  "description": "Locale and i18n strings for memoryblock",
+  "version": "0.1.1-beta",
   "type": "module",
+  "description": "Localization strings and formatting utilities for memoryblock.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -13,5 +13,37 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
-  }
+  },
+  "keywords": [
+    "memoryblock",
+    "mblk",
+    "ai-agent",
+    "assistants",
+    "agents",
+    "automation",
+    "multi-agent",
+    "agentic-framework",
+    "locale",
+    "i18n",
+    "translations",
+    "language",
+    "localization",
+    "internationalization",
+    "l10n",
+    "i18next"
+  ],
+  "author": {
+    "name": "Ghazi",
+    "url": "https://mgks.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memoryblock-io/memoryblock.git"
+  },
+  "bugs": {
+    "url": "https://github.com/memoryblock-io/memoryblock/issues"
+  },
+  "homepage": "https://memoryblock.io",
+  "funding": "https://github.com/sponsors/mgks",
+  "license": "MIT"
 }
