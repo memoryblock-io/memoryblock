@@ -31,6 +31,20 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
 
+      - name: Cache TS Build Info
+        uses: actions/cache@v4
+        with:
+          path: |
+            packages/*/dist
+            packages/plugins/*/dist
+            packages/*/*.tsbuildinfo
+            packages/plugins/*/*.tsbuildinfo
+            *.tsbuildinfo
+          key: ${{ runner.os }}-ts-${{ github.ref }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-ts-${{ github.ref }}-
+            ${{ runner.os }}-ts-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
