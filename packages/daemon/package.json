@@ -3,6 +3,9 @@
   "version": "0.1.1-beta",
   "type": "module",
   "description": "Background daemon manager for memoryblock.",
+  "files": [
+    "dist/"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

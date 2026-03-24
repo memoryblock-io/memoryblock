@@ -3,6 +3,9 @@
   "version": "0.1.1-beta",
   "type": "module",
   "description": "Official plugin for fetching and parsing webpage content.",
+  "files": [
+    "dist/"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

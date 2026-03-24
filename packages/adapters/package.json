@@ -3,6 +3,9 @@
   "version": "0.1.1-beta",
   "type": "module",
   "description": "LLM adapters interface for memoryblock.",
+  "files": [
+    "dist/"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

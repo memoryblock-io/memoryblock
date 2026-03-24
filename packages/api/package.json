@@ -3,6 +3,9 @@
   "version": "0.1.1-beta",
   "type": "module",
   "description": "Core API server for memoryblock daemon and dashboard.",
+  "files": [
+    "dist/"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

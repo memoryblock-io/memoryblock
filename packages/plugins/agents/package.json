@@ -3,6 +3,9 @@
   "version": "0.1.1-beta",
   "type": "module",
   "description": "Official plugin for orchestrating secondary AI agents in memoryblock.",
+  "files": [
+    "dist/"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
