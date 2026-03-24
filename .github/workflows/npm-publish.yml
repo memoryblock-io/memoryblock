@@ -66,9 +66,17 @@ jobs:
         run: |
           for dir in packages/* packages/plugins/*; do
             if [ -f "$dir/package.json" ]; then
-              echo "Publishing $dir..."
+              VERSION=$(node -e "console.log(require('./$dir/package.json').version)")
+              TAG="latest"
+              
+              if [[ "$VERSION" == *-* ]]; then
+                TAG=$(echo "$VERSION" | awk -F'-' '{print $2}' | awk -F'.' '{print $1}')
+              fi
+              
+              echo "Publishing $dir v$VERSION under tag: $TAG..."
+              
               exit_code=0
-              publish_output=$(npm publish "./$dir" --access public 2>&1) || exit_code=$?
+              publish_output=$(npm publish "./$dir" --access public --tag "$TAG" 2>&1) || exit_code=$?
               
               if [ $exit_code -ne 0 ]; then
                 if echo "$publish_output" | grep -q 'previously published versions\|EPRIVATE'; then
