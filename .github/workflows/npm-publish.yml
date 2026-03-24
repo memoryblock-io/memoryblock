@@ -47,10 +47,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build packages
-        run: pnpm -r run build
+        run: pnpm dev:build
 
       - name: Run linting
-        run: pnpm lint
+        run: pnpm dev:lint
 
       - name: Run failsafe tests
         run: node scripts/failsafe.js --skip-setup
