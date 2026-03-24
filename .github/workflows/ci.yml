@@ -35,7 +35,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build packages
-        run: pnpm dev:build
+        run: pnpm --filter @memoryblock/locale run build && pnpm --filter memoryblock run build && pnpm --filter @memoryblock/plugin-aws run build && pnpm --filter @memoryblock/adapters run build && pnpm --filter @memoryblock/tools run build && pnpm --filter @memoryblock/plugin-agents run build && pnpm -r run build
 
   lint:
     runs-on: ubuntu-latest
