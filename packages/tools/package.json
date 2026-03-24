@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/tools",
-  "version": "0.1.1-beta",
+  "version": "0.1.2",
   "type": "module",
   "description": "Standard tool definitions and schemas for memoryblock.",
   "files": [

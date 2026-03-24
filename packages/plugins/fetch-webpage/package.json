@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/plugin-fetch-webpage",
-  "version": "0.1.1-beta",
+  "version": "0.1.2",
   "type": "module",
   "description": "Official plugin for fetching and parsing webpage content.",
   "files": [

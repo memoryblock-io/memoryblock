@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/daemon",
-  "version": "0.1.1-beta",
+  "version": "0.1.2",
   "type": "module",
   "description": "Background daemon manager for memoryblock.",
   "files": [
