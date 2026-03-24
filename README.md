@@ -1,19 +1,48 @@
 <div align="center">
-  <h1>⬡ memoryblock</h1>
-  <p><strong>Run AI agents that remember, think, and work — without burning through your budget.</strong></p>
-  <br>
-  <a href="#-quick-start">Quick Start</a> · <a href="#-what-makes-this-different">Why Memoryblock</a> · <a href="#-adapters">Adapters</a> · <a href="#-channels">Channels</a> · <a href="#-documentation">Docs</a>
+
+  <!-- PROJECT TITLE -->
+  <h3>
+    <h1>⬡ memoryblock</h1>
+    <!--<img src="https://github.com/memoryblock-io/memoryblock/blob/main/packages/ui/assets/images/memoryblock-logo-dark.png?raw=true" alt="memoryblock logo" width="210" />-->
+  </h3>
+  
+  <!-- ONE LINE SUMMARY -->
+  <p>
+    <b>Run AI agents that remember, think, and work - without burning through your budget.</b>
+  </p>
+  
+  <!-- BADGES -->
+  <p>
+    <a href="https://www.npmjs.com/package/memoryblock"><img src="https://img.shields.io/npm/v/memoryblock.svg?style=flat-square&color=CB3837" alt="npm version"></a>
+    <!--<a href="https://www.npmjs.com/package/memoryblock?activeTab=versions"><img src="https://img.shields.io/npm/dt/memoryblock.svg?style=flat-square&color=38bd24" alt="downloads"></a>-->
+    <a href="https://github.com/memoryblock-io/memoryblock/stargazers"><img src="https://img.shields.io/github/stars/memoryblock-io/memoryblock?style=flat-square&logo=github" alt="stars"></a>
+    <a href="https://github.com/memoryblock-io/memoryblock/blob/main/LICENSE"><img src="https://img.shields.io/github/license/memoryblock-io/memoryblock.svg?style=flat-square&color=A31F34" alt="license"></a>
+  </p>
+
+  <!-- MENU -->
+  <p>
+    <h4>
+      <a href="https://memoryblock.io">View Demo</a> • 
+      <a href="https://docs.memoryblock.io/getting-started/installation/">Documentation</a> • 
+      <a href="https://github.com/memoryblock-io/memoryblock/issues">Report Bug</a>
+    </h4>
+  </p>
+
+  <!-- PREVIEW -->
+  <p>
+    <br/>
+    <img width="800" alt="memoryblock preview" src="https://github.com/user-attachments/assets/f7cf1e5b-e05c-4f8b-8747-0ef13adde054" />
+    <br/>
+    <sup><i>memoryblock web client dashboard preview</i></sup>
+  </p>
+
 </div>
 
-<br>
-
-## What is Memoryblock?
-
-Memoryblock lets you deploy AI agents as isolated **blocks** — independent workspaces, each with their own memory, tools, and personality. Think of a block as a private office for an AI. Give it a job, point it at a channel, and let it run.
+Memoryblock lets you deploy AI agents as isolated **blocks** - independent workspaces, each with their own memory, tools, and personality. Think of a block as a private office for an AI. Give it a job, point it at a channel, and let it run.
 
 One block can be your personal assistant. Another can monitor your infrastructure. A third can research topics and write summaries. They don't interfere with each other, they don't share memory, and they don't waste tokens re-learning what they already know.
 
-Need them to collaborate? A block can spawn sub-agents — temporary workers in sandboxed environments — to handle specific tasks and report back. No shared state pollution, no context confusion.
+Need them to collaborate? A block can spawn sub-agents, the temporary workers in sandboxed environments to handle specific tasks and report back. No shared state pollution, no context confusion.
 
 ```
 you ─── terminal ──── block "home"       (your daily assistant)
@@ -25,19 +54,19 @@ you ─── terminal ──── block "home"       (your daily assistant)
 
 ### It's cheap to run. Seriously.
 
-Most AI tools send the entire tool schema — thousands of tokens — on *every single message*. For a background agent running all day, that's money on fire.
+Most AI tools send the entire tool schema. Thousands of tokens. On *every single message*. For a background agent running all day, that's money on fire.
 
 Memoryblock was engineered around this problem:
 
-- **On-demand schema loading** — tool definitions are injected only when needed, then dropped. Payload sizes go from ~2,600 tokens to ~1,200 tokens per turn.
-- **History trimming** — large tool outputs (log dumps, file contents) are read once, then truncated in memory to 500 characters. The LLM already saw it. No need to pay for it again.
-- **Smart context recovery** — when context fills up, the engine summarizes everything into clean, actionable notes and starts fresh. No crash, no data loss, no compact context error loops.
+- **On-demand schema loading** - tool definitions are injected only when needed, then dropped. Payload sizes go from ~2,600 tokens to ~1,200 tokens per turn.
+- **History trimming** - large tool outputs (log dumps, file contents) are read once, then truncated in memory to 500 characters. The LLM already saw it. No need to pay for it again.
+- **Smart context recovery** - when context fills up, the engine summarizes everything into clean, actionable notes and starts fresh. No crash, no data loss, no compact context error loops.
 
 > In testing, these optimizations reduce token growth between turns from 4.2× to under 2×, resulting in over 50% cost reduction on sustained sessions.
 
 ### It runs on Bun. Nothing else.
 
-No Node.js. No Electron. No heavy frameworks. The entire core — HTTP server, WebSocket streaming, static file serving — is built on native APIs. Cold starts are fast. Memory usage is small.
+No Node.js. No Electron. No heavy frameworks. The entire core, HTTP server, WebSocket streaming, static file serving, is built on native APIs. Cold starts are fast. Memory usage is small.
 
 ### Every block is its own world.
 
@@ -45,7 +74,7 @@ Each block gets its own `config.json`, `memory.md`, `monitor.md`, `costs.json`, 
 
 ### Talk to it from anywhere.
 
-Your blocks are accessible through the **CLI** (a simple interactive terminal), different **Channels** (including Telegram, Discord, Slack, and more), and a **Web Dashboard** (with live WebSocket updates). Same block, same memory - different surfaces.
+Your blocks are accessible through the **CLI** (a simple interactive terminal), different **Channels** (including Telegram, Discord, Slack, and more), and a **Web Dashboard** (with live WebSocket updates). Same block, same memory, different surfaces.
 
 ### Use any model you want.
 
@@ -58,9 +87,9 @@ Memoryblock doesn't lock you into one provider. Swap models per-block, per-task,
 | **Google Gemini** | API key |
 | **Anthropic** | API key |
 
-Adding a new adapter is one file. See [`_documentation/adapters/`](_documentation/adapters/) for examples.
+Adding a new adapter is one file. See [adapter docs](https://docs.memoryblock.io/adapters/) for examples.
 
-## 🚀 Quick Start
+## Quick Start
 
 **Requirements:** [Bun](https://bun.sh) ≥ 1.0 and an API key from any supported provider.
 
@@ -93,9 +122,9 @@ Opens a live dashboard at `localhost:8420` with real-time block monitoring, cost
 mblk start home --channel telegram
 ```
 
-Your block is now live on the channel you chose. Same memory, same tools — accessible from anywhere.
+Your block is now live on the channel you chose. Same memory, same tools, accessible from anywhere.
 
-## 📖 Commands
+## Commands
 
 Everything you can do from the terminal, you can do from chat (and soon, the web UI too):
 
@@ -110,9 +139,9 @@ Everything you can do from the terminal, you can do from chat (and soon, the web
 | `mblk reset <block>` | — | Reset memory and costs |
 | `mblk add <plugin>` | — | Install a plugin |
 
-Full reference: [`_documentation/development/commands.md`](_documentation/development/commands.md)
+Full reference: [command docs](https://docs.memoryblock.io/commands.md)
 
-## 🔌 Plugins
+## Plugins
 
 Blocks come with a core set of tools. Need more? Add them:
 
@@ -131,31 +160,19 @@ Plugins are just npm packages. The installer resolves, downloads, and wires them
 | `agents` | Spawn sub-agents for delegated tasks |
 | `aws` | Cloud SDK code generation tools |
 
-## 🔗 Adapters
+## Adapters
 
 Each adapter is a single file that maps Memoryblock's internal message format to a provider's API. They handle authentication, request formatting, and response parsing. Writing a new adapter is straightforward — the interface is small and well-documented.
 
-See all supported adapters and how to write your own: [`_documentation/adapters/`](_documentation/adapters/)
+See all supported adapters and how to write your own: [adapters](https://docs.memoryblock.io/adapters/)
 
-## 📡 Channels
+## Channels
 
 Channels are how your blocks talk to the outside world. The CLI, messaging platforms, and the web dashboard are all channels — equal citizens, not afterthoughts. Adding a new channel is a single file implementation.
 
-Supported and upcoming channels are documented in [`_documentation/`](_documentation/).
+Supported and upcoming channels are documented in [channels](https://docs.memoryblock.io/channels/).
 
-## 📚 Documentation
-
-All documentation lives in `_documentation/`:
-
-| Area | What's there |
-|:---|:---|
-| **Getting Started** | `getting-started.md`, `architecture.md`, `configuration.md` |
-| **Adapters** | Per-provider setup guides with code examples |
-| **Plugins** | How each plugin works and how to configure it |
-| **Cost Efficiency** | Token optimization strategies and real-world benchmarks |
-| **Development** | Contributing guide, CLI/command reference, build scripts |
-
-## 🏗️ Architecture
+## Architecture
 
 ```
 packages/
@@ -171,19 +188,13 @@ packages/
 
 It's a pnpm monorepo. Every package builds independently with `tsc`. No bundlers, no magic.
 
-## 🤝 Contributing
+## Community & Support
 
-Memoryblock is structured as a pnpm workspace monorepo. To get started:
+- **Contributing**: We welcome PRs! See [CONTRIBUTING.md](.github/CONTRIBUTING.md).
+- **Support**: If you find `memoryblock` useful, please consider [sponsoring the project](https://github.com/sponsors/mgks) or giving it a star ⭐.
 
-```bash
-git clone https://github.com/memoryblock-io/memoryblock.git
-cd memoryblock
-pnpm install
-pnpm dev:build
-```
+## License
 
-Read [`_documentation/development/contributing.md`](_documentation/development/contributing.md) for coding standards, how to write adapters, channels, and plugins.
+Distributed under the MIT License. See `LICENSE` for more information.
 
-## 📜 License
-
-MIT
+![Website Badge](https://img.shields.io/badge/.*%20mgks.dev-blue?style=flat&link=https%3A%2F%2Fmgks.dev) ![Sponsor Badge](https://img.shields.io/badge/%20%20Become%20a%20Sponsor%20%20-red?style=flat&logo=github&link=https%3A%2F%2Fgithub.com%2Fsponsors%2Fmgks)
