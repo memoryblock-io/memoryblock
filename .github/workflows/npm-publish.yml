@@ -52,8 +52,8 @@ jobs:
       - name: Run linting
         run: pnpm dev:lint
 
-      - name: Run failsafe tests
-        run: node scripts/failsafe.js --skip-setup
+      - name: Run verification
+        run: pnpm dev:verify --skip-setup
 
       - name: Copy LICENSE
         run: |
@@ -63,4 +63,21 @@ jobs:
         run: node scripts/resolve-ws-deps.js
 
       - name: Publish to npm
-        run: npm publish --workspaces --include-workspace-root=false --access public
+        run: |
+          for dir in packages/* packages/plugins/*; do
+            if [ -f "$dir/package.json" ]; then
+              echo "Publishing $dir..."
+              exit_code=0
+              publish_output=$(npm publish "./$dir" --access public 2>&1) || exit_code=$?
+              
+              if [ $exit_code -ne 0 ]; then
+                if echo "$publish_output" | grep -q 'previously published versions\|EPRIVATE'; then
+                  echo "::notice::Skipping $dir: Already published or private."
+                else
+                  echo "::error::Failed to publish $dir"
+                  echo "$publish_output"
+                  exit 1
+                fi
+              fi
+            fi
+          done
