@@ -36,10 +36,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build packages
-        run: pnpm -r run build
+        run: pnpm dev:build
 
       - name: Run Linting
-        run: pnpm lint
+        run: pnpm dev:lint
 
       - name: Run verification
-        run: pnpm verify --skip-setup
+        run: pnpm dev:verify --skip-setup
