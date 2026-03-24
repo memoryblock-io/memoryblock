@@ -2,8 +2,7 @@
 
   <!-- PROJECT TITLE -->
   <h3>
-    <h1>⬡ memoryblock</h1>
-    <!--<img src="https://github.com/memoryblock-io/memoryblock/blob/main/packages/ui/assets/images/memoryblock-logo-dark.png?raw=true" alt="memoryblock logo" width="210" />-->
+    <img width="240" alt="memoryblock logo" src="https://github.com/memoryblock-io/memoryblock/blob/main/packages/web/public/images/memoryblock-logo.png?raw=true" />
   </h3>
   
   <!-- ONE LINE SUMMARY -->
