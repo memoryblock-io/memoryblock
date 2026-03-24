@@ -1,11 +1,11 @@
-# @memoryblock/plugin-web-search
+# @memoryblock/daemon
 
-Official plugin providing web search capabilities to **memoryblock**.
+Background daemon manager for **memoryblock**.
 
 This package handles:
-- DuckDuckGo deep search queries
-- Search result context aggregation
-- URL extraction
+- Block lifecycle (start, stop, status, reset)
+- Daemon process persistence
+- Logs handling
 
 ## The `memoryblock` Ecosystem
 

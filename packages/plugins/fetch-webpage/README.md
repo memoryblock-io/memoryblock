@@ -1,11 +1,11 @@
-# @memoryblock/plugin-web-search
+# @memoryblock/plugin-fetch-webpage
 
-Official plugin providing web search capabilities to **memoryblock**.
+Official plugin for fetching and parsing webpage content natively.
 
 This package handles:
-- DuckDuckGo deep search queries
-- Search result context aggregation
-- URL extraction
+- HTML extraction from URLs
+- Markdown conversion
+- Deep web parsing
 
 ## The `memoryblock` Ecosystem
 

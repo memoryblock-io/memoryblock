@@ -1,11 +1,11 @@
-# @memoryblock/plugin-web-search
+# @memoryblock/api
 
-Official plugin providing web search capabilities to **memoryblock**.
+Core API server for **memoryblock** daemon and dashboard.
 
 This package handles:
-- DuckDuckGo deep search queries
-- Search result context aggregation
-- URL extraction
+- REST endpoints
+- WebSocket true real-time text streaming
+- Global plugin and user settings management
 
 ## The `memoryblock` Ecosystem
 

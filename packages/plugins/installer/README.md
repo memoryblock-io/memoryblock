@@ -1,11 +1,12 @@
-# @memoryblock/plugin-web-search
+# @memoryblock/plugin-installer
 
-Official plugin providing web search capabilities to **memoryblock**.
+Official plugin installer and registry manager for **memoryblock**.
 
 This package handles:
-- DuckDuckGo deep search queries
-- Search result context aggregation
-- URL extraction
+- NPM package module resolving
+- Block capability auto-mounting
+- Plugin settings schema generation and persistance
+- Streaming npm installation logs
 
 ## The `memoryblock` Ecosystem
 

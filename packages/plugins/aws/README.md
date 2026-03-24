@@ -1,11 +1,11 @@
-# @memoryblock/plugin-web-search
+# @memoryblock/plugin-aws
 
-Official plugin providing web search capabilities to **memoryblock**.
+Official plugin for AWS integrations in **memoryblock**.
 
 This package handles:
-- DuckDuckGo deep search queries
-- Search result context aggregation
-- URL extraction
+- S3 bucket interactions
+- AWS Bedrock configuration and retrieval
+- Cloud metrics integrations
 
 ## The `memoryblock` Ecosystem
 

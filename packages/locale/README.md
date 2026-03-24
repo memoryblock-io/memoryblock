@@ -1,11 +1,11 @@
-# @memoryblock/plugin-web-search
+# @memoryblock/locale
 
-Official plugin providing web search capabilities to **memoryblock**.
+Localization strings and formatting utilities for **memoryblock**.
 
 This package handles:
-- DuckDuckGo deep search queries
-- Search result context aggregation
-- URL extraction
+- i18n support across the CLI and backend
+- Language bundles processing
+- Dynamic message formatting
 
 ## The `memoryblock` Ecosystem
 

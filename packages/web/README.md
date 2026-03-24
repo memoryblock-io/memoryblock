@@ -1,11 +1,12 @@
-# @memoryblock/plugin-web-search
+# @memoryblock/web
 
-Official plugin providing web search capabilities to **memoryblock**.
+Front-end dashboard and Web UI for **memoryblock**.
 
 This package handles:
-- DuckDuckGo deep search queries
-- Search result context aggregation
-- URL extraction
+- Centralized web panel
+- Block chat interface
+- Visual settings configuration
+- Live plugin management architecture
 
 ## The `memoryblock` Ecosystem
 

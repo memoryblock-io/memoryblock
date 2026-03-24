@@ -1,11 +1,12 @@
-# @memoryblock/plugin-web-search
+# @memoryblock/channels
 
-Official plugin providing web search capabilities to **memoryblock**.
+Communication channel integrations for **memoryblock**.
 
 This package handles:
-- DuckDuckGo deep search queries
-- Search result context aggregation
-- URL extraction
+- CLI conversation channel
+- Telegram bot channel
+- Web Dashboard channel
+- Multi-channel real-time routing
 
 ## The `memoryblock` Ecosystem
 

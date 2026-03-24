@@ -1,11 +1,11 @@
-# @memoryblock/plugin-web-search
+# @memoryblock/tools
 
-Official plugin providing web search capabilities to **memoryblock**.
+Standard tool definitions and schemas for **memoryblock**.
 
 This package handles:
-- DuckDuckGo deep search queries
-- Search result context aggregation
-- URL extraction
+- Standardized tool execution
+- Zod JSON Schema validations
+- Tool argument type coercion
 
 ## The `memoryblock` Ecosystem
 

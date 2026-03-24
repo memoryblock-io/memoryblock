@@ -598,12 +598,15 @@ export class ApiServer {
             try {
                 const pkgRaw = await readFile(join(this.config.workspacePath, 'package.json'), 'utf8');
                 installed = JSON.parse(pkgRaw).dependencies || {};
-            } catch {}
+            } catch { /* ignore */ }
 
-            const mapped = plugins.map((p: any) => ({
-                ...p,
-                installed: !!installed[p.package]
-            }));
+            const mapped = plugins.map((p: unknown) => {
+                const plugin = p as any;
+                return {
+                    ...plugin,
+                    installed: !!installed[plugin.package]
+                };
+            });
 
             // also merge settings
             for (const p of mapped) {
@@ -618,8 +621,8 @@ export class ApiServer {
             }
 
             return this.json({ plugins: mapped });
-        } catch (err: any) {
-            return this.error(500, err.message);
+        } catch (err: unknown) {
+            return this.error(500, (err as Error).message);
         }
     }
 
@@ -692,8 +695,8 @@ export class ApiServer {
             const installer = new PluginInstaller();
             await installer.savePluginSettings(pluginId, body, this.config.workspacePath);
             return this.json({ success: true });
-        } catch (err: any) {
-            return this.error(400, err.message);
+        } catch (err: unknown) {
+            return this.error(400, (err as Error).message);
         }
     }
 

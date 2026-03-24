@@ -1,11 +1,13 @@
-# @memoryblock/plugin-web-search
+# @memoryblock/adapters
 
-Official plugin providing web search capabilities to **memoryblock**.
+LLM adapters interface for **memoryblock**.
 
 This package handles:
-- DuckDuckGo deep search queries
-- Search result context aggregation
-- URL extraction
+- OpenAI integration
+- Anthropic integration
+- AWS Bedrock integration
+- Google Gemini integration
+- Local model support via Ollama
 
 ## The `memoryblock` Ecosystem
 
@@ -18,7 +20,7 @@ This package handles:
 
 **Integrations & Tooling**
 *   [**@memoryblock/adapters**](https://www.npmjs.com/package/@memoryblock/adapters) - LLM adapters (OpenAI, Anthropic, Bedrock, etc).
-*   [**@memoryblock/channels**](https://www.npmjs.com/package/@memoryblock/channels) - Communication channels (CLI, Telegram, Web).
+*   [**@memoryblock/channels**](https://www.npmjs.com/package/@memoryblock/channels) - Communication channels (CLI, Web, Telegram, Discord, etc).
 *   [**@memoryblock/tools**](https://www.npmjs.com/package/@memoryblock/tools) - Standard tool definitions and schemas.
 *   [**@memoryblock/locale**](https://www.npmjs.com/package/@memoryblock/locale) - Localization strings and formatting.
 *   [**@memoryblock/web**](https://www.npmjs.com/package/@memoryblock/web) - Front-end dashboard and Web UI.

@@ -1,11 +1,11 @@
-# @memoryblock/plugin-web-search
+# @memoryblock/plugin-agents
 
-Official plugin providing web search capabilities to **memoryblock**.
+Official plugin for orchestrating secondary AI agents in **memoryblock**.
 
 This package handles:
-- DuckDuckGo deep search queries
-- Search result context aggregation
-- URL extraction
+- Agent delegation
+- Task sub-routing
+- Multi-agent hierarchical scaling
 
 ## The `memoryblock` Ecosystem
 
