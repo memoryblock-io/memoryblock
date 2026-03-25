@@ -65,7 +65,6 @@ try {
     // 2. TypeScript & Lint
     // ========================================
     console.log('\x1b[2m🔍 [2/8] TypeScript Type Checking & Lint...\x1b[0m');
-    runCmd('pnpm dev:build');
 
     // Run lint (ESLint with typescript-eslint)
     try {

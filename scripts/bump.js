@@ -28,7 +28,7 @@ const packagesDir = path.join(root, "packages");
 function updateVersion(pkgPath) {
   const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
   pkg.version = newVersion;
-  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
   console.log(`Updated: ${pkg.name} → ${newVersion}`);
 }
 
