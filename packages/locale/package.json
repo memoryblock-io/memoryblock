@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/locale",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "description": "Localization strings and formatting utilities for memoryblock.",
   "files": [

@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/plugin-web-search",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "description": "Official plugin providing web search capabilities to memoryblock.",
   "files": [
@@ -17,6 +17,9 @@
   },
   "dependencies": {
     "@memoryblock/types": "workspace:*"
+  },
+  "peerDependencies": {
+    "memoryblock": "workspace:*"
   },
   "keywords": [
     "memoryblock",

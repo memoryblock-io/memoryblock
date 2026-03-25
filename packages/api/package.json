@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/api",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "description": "Core API server for memoryblock daemon and dashboard.",
   "files": [
@@ -22,7 +22,7 @@
     "@memoryblock/plugin-installer": "workspace:*"
   },
   "peerDependencies": {
-    "memoryblock": ">=0.1.2"
+    "memoryblock": "workspace:*"
   },
   "keywords": [
     "memoryblock",

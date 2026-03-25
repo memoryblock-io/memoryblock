@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/tools",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "description": "Standard tool definitions and schemas for memoryblock.",
   "files": [
@@ -17,6 +17,9 @@
   },
   "dependencies": {
     "@memoryblock/types": "workspace:*"
+  },
+  "peerDependencies": {
+    "memoryblock": "workspace:*"
   },
   "keywords": [
     "memoryblock",

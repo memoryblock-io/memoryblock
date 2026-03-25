@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/adapters",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "description": "LLM adapters interface for memoryblock.",
   "files": [
