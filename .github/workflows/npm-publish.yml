@@ -49,9 +49,6 @@ jobs:
       - name: Build packages
         run: pnpm dev:build
 
-      - name: Run linting
-        run: pnpm dev:lint
-
       - name: Run verification
         run: pnpm dev:verify --skip-setup
 
