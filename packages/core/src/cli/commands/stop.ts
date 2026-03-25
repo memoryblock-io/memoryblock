@@ -1,4 +1,4 @@
-import type { GlobalConfig } from '../../types.js';
+import type { GlobalConfig } from '@memoryblock/types';
 import { loadGlobalConfig, resolveBlocksDir, resolveBlockPath, savePulseState, loadPulseState, loadBlockConfig, saveBlockConfig } from '../../utils/config.js';
 import { pathExists } from '../../utils/fs.js';
 import { log } from '../logger.js';

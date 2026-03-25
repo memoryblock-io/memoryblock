@@ -1,6 +1,6 @@
 import { promises as fsp } from 'node:fs';
 import { join } from 'node:path';
-import type { TokenUsage } from '../types.js';
+import type { TokenUsage } from '@memoryblock/types';
 
 /**
  * Pricing per 1M tokens (USD) — system-level, zero model tokens used.

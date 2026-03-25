@@ -4,7 +4,7 @@ import { ensureDir, writeJson } from '../../utils/fs.js';
 import {
   getWsRoot, getConfigPath, getAuthPath, isInitialized,
 } from '../../utils/config.js';
-import { GlobalConfigSchema } from '../../schemas.js';
+import { GlobalConfigSchema } from '@memoryblock/types';
 import { log } from '../logger.js';
 
 import { PROVIDERS, CHANNELS, PLUGINS, PROVIDER_AUTH, CHANNEL_AUTH } from '../constants.js';

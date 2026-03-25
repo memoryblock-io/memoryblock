@@ -3,10 +3,10 @@ import { join, resolve } from 'node:path';
 import { readJson, readJsonSafe, writeJson, pathExists } from './fs.js';
 import {
     GlobalConfigSchema, BlockConfigSchema, AuthConfigSchema, PulseStateSchema,
-} from '../schemas.js';
+} from '@memoryblock/types';
 import type {
     GlobalConfig, BlockConfig, AuthConfig, PulseState,
-} from '../types.js';
+} from '@memoryblock/types';
 
 // ===== Paths =====
 const MEMORYBLOCK_HOME = join(homedir(), '.memoryblock');

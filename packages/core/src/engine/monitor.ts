@@ -1,7 +1,7 @@
 import type {
     LLMAdapter, LLMMessage, ToolDefinition, Channel, BlockConfig, ChannelMessage,
     IToolRegistry,
-} from '../types.js';
+} from '@memoryblock/types';
 import { MemoryManager } from './memory.js';
 import { Gatekeeper } from './gatekeeper.js';
 import { ConversationLogger } from './conversation-log.js';

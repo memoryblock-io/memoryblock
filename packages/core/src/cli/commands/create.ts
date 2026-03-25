@@ -3,7 +3,7 @@ import { ensureDir, writeJson, atomicWrite, pathExists } from '../../utils/fs.js
 import {
     loadGlobalConfig, resolveBlockPath, isInitialized,
 } from '../../utils/config.js';
-import { BlockConfigSchema, PulseStateSchema } from '../../schemas.js';
+import { BlockConfigSchema, PulseStateSchema } from '@memoryblock/types';
 import { log } from '../logger.js';
 import { FILE_TEMPLATES } from '../../engine/prompts.js';
 

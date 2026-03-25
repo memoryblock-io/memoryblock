@@ -7,7 +7,7 @@ import {
 import { pathExists } from '../../utils/fs.js';
 import { log } from '../logger.js';
 import { t } from '@memoryblock/locale';
-import type { BlockStatus } from '../../types.js';
+import type { BlockStatus } from '@memoryblock/types';
 
 const STATUS_ICON: Record<BlockStatus, string> = {
     SLEEPING: chalk.gray('💤'),
