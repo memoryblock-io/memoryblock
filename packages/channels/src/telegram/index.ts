@@ -1,5 +1,5 @@
 import { Bot, InlineKeyboard } from 'grammy';
-import type { Channel, ChannelMessage, ApprovalRequest } from 'memoryblock';
+import type { Channel, ChannelMessage, ApprovalRequest } from '@memoryblock/types';
 import { loadAuth, log, t } from 'memoryblock';
 
 /**

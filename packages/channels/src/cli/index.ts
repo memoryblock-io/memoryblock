@@ -1,6 +1,6 @@
 import { createInterface, type Interface, moveCursor, clearLine } from 'node:readline';
 import chalk from 'chalk';
-import type { Channel, ChannelMessage, ApprovalRequest } from 'memoryblock';
+import type { Channel, ChannelMessage, ApprovalRequest } from '@memoryblock/types';
 
 const THEME = {
     brand: chalk.hex('#7C3AED'),

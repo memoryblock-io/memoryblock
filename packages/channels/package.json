@@ -18,7 +18,7 @@
   "dependencies": {
     "chalk": "^5.4.0",
     "grammy": "^1.35.0",
-    "memoryblock": "workspace:*"
+    "@memoryblock/types": "workspace:*"
   },
   "keywords": [
     "memoryblock",

@@ -1,4 +1,4 @@
-import type { Channel, ChannelMessage, ApprovalRequest } from 'memoryblock';
+import type { Channel, ChannelMessage, ApprovalRequest } from '@memoryblock/types';
 
 /**
  * Base Channel interface re-exported from core types.

@@ -1,4 +1,4 @@
-import type { Channel, ChannelMessage, ApprovalRequest } from 'memoryblock';
+import type { Channel, ChannelMessage, ApprovalRequest } from '@memoryblock/types';
 
 /**
  * MultiChannelManager allows the monitor to bind to multiple channels simultaneously
