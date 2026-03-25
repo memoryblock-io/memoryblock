@@ -1,7 +1,7 @@
 import type {
     LLMAdapter, LLMMessage, LLMResponse, ToolDefinition,
     ToolCall, TokenUsage
-} from 'memoryblock';
+} from '@memoryblock/types';
 
 export interface AnthropicAdapterConfig {
     model?: string;

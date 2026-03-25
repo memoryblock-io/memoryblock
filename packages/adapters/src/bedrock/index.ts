@@ -16,7 +16,7 @@ import { NodeHttpHandler } from '@smithy/node-http-handler';
 import type {
     LLMAdapter, LLMMessage, LLMResponse, ToolDefinition,
     ToolCall, StopReason, TokenUsage,
-} from 'memoryblock';
+} from '@memoryblock/types';
 
 export interface BedrockAdapterConfig {
     model?: string;

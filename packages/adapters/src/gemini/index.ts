@@ -1,7 +1,7 @@
 import type {
     LLMAdapter, LLMMessage, LLMResponse, ToolDefinition,
     TokenUsage
-} from 'memoryblock';
+} from '@memoryblock/types';
 
 export interface GeminiAdapterConfig {
     model?: string;

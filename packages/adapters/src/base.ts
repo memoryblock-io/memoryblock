@@ -1,4 +1,4 @@
-import type { LLMAdapter, LLMMessage, LLMResponse, ToolDefinition } from 'memoryblock';
+import type { LLMAdapter, LLMMessage, LLMResponse, ToolDefinition } from '@memoryblock/types';
 
 /**
  * Base adapter interface re-exported from core types.
