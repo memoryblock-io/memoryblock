@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { promises as fsp } from 'node:fs';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - workspace resolution cache issue
-import { loadGlobalConfig, resolveBlocksDir, saveBlockConfig, BlockConfigSchema } from 'memoryblock';
+import { loadGlobalConfig, resolveBlocksDir, saveBlockConfig, BlockConfigSchema } from '@memoryblock/types';
 
 export const createAgentTool = {
     definition: {

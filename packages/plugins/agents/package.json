@@ -20,7 +20,7 @@
   "dependencies": {
     "@memoryblock/tools": "workspace:*",
     "@memoryblock/adapters": "workspace:*",
-    "memoryblock": "workspace:*"
+    "@memoryblock/types": "workspace:*"
   },
   "keywords": [
     "memoryblock",

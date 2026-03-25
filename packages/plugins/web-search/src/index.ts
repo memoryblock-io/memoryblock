@@ -1,4 +1,4 @@
-import type { ToolExecutionResult, ToolContext, ToolDefinition } from 'memoryblock';
+import type { ToolExecutionResult, ToolContext, ToolDefinition } from '@memoryblock/types';
 import { BraveSearchProvider } from './brave/index.js';
 
 export type { SearchProvider, SearchResult, SearchOptions } from './base.js';

@@ -1,4 +1,4 @@
-import type { ToolExecutionResult, ToolContext, ToolDefinition } from 'memoryblock';
+import type { ToolExecutionResult, ToolContext, ToolDefinition } from '@memoryblock/types';
 
 /**
  * fetch_webpage — extract readable content from a URL.
