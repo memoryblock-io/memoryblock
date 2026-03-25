@@ -1,4 +1,4 @@
-import type { ToolExecutionResult, ToolContext } from 'memoryblock';
+import type { ToolExecutionResult, ToolContext } from '@memoryblock/types';
 import type { Tool } from '../base.js';
 import { createSchema } from '../base.js';
 

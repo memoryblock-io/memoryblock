@@ -11,7 +11,7 @@
  */
 
 import { resolve, relative, isAbsolute } from 'node:path';
-import type { ToolContext, ToolExecutionResult, PermissionsConfig } from 'memoryblock';
+import type { ToolContext, ToolExecutionResult, PermissionsConfig } from '@memoryblock/types';
 
 // Patterns that look like file paths in tool params
 const PATH_PARAM_NAMES = ['path', 'file', 'filePath', 'directory', 'dir', 'target', 'source', 'destination'];

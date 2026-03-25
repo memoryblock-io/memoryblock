@@ -2,7 +2,7 @@ import { promises as fsp } from 'node:fs';
 import { join, resolve, relative, isAbsolute } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { ToolExecutionResult, ToolContext } from 'memoryblock';
+import type { ToolExecutionResult, ToolContext } from '@memoryblock/types';
 import type { Tool } from '../base.js';
 import { createSchema } from '../base.js';
 

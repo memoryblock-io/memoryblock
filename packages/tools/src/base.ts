@@ -1,4 +1,4 @@
-import type { ToolDefinition, ToolContext, ToolExecutionResult } from 'memoryblock';
+import type { ToolDefinition, ToolContext, ToolExecutionResult } from '@memoryblock/types';
 
 /**
  * Base Tool interface. All built-in and plugin tools must implement this.

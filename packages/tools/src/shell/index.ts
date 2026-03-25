@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { ToolExecutionResult } from 'memoryblock';
+import type { ToolExecutionResult } from '@memoryblock/types';
 import type { Tool } from '../base.js';
 import { createSchema } from '../base.js';
 
