@@ -2,7 +2,7 @@
 
   <!-- PROJECT TITLE -->
   <h3>
-    <img width="240" alt="memoryblock logo" src="https://github.com/memoryblock-io/memoryblock/blob/main/packages/web/public/images/memoryblock-logo.png?raw=true" />
+    <img width="240" alt="memoryblock logo" src="https://github.com/user-attachments/assets/0de43158-86ab-4b8d-be3e-5c75a74617a2" />
   </h3>
   
   <!-- ONE LINE SUMMARY -->
@@ -13,7 +13,7 @@
   <!-- BADGES -->
   <p>
     <a href="https://www.npmjs.com/package/memoryblock"><img src="https://img.shields.io/npm/v/memoryblock.svg?style=flat-square&color=CB3837" alt="npm version"></a>
-    <!--<a href="https://www.npmjs.com/package/memoryblock?activeTab=versions"><img src="https://img.shields.io/npm/dt/memoryblock.svg?style=flat-square&color=38bd24" alt="downloads"></a>-->
+    <a href="https://www.npmjs.com/package/memoryblock?activeTab=versions"><img src="https://img.shields.io/npm/dt/memoryblock.svg?style=flat-square&color=38bd24" alt="downloads"></a>
     <a href="https://github.com/memoryblock-io/memoryblock/stargazers"><img src="https://img.shields.io/github/stars/memoryblock-io/memoryblock?style=flat-square&logo=github" alt="stars"></a>
     <a href="https://github.com/memoryblock-io/memoryblock/blob/main/LICENSE"><img src="https://img.shields.io/github/license/memoryblock-io/memoryblock.svg?style=flat-square&color=A31F34" alt="license"></a>
   </p>
@@ -30,7 +30,7 @@
   <!-- PREVIEW -->
   <p>
     <br/>
-    <img width="800" alt="memoryblock preview" src="https://github.com/user-attachments/assets/f7cf1e5b-e05c-4f8b-8747-0ef13adde054" />
+    <img width="800" alt="memoryblock preview" src="https://github.com/user-attachments/assets/39fa464b-9cda-498c-a04c-b817b0af826c" />
     <br/>
     <sup><i>memoryblock web client dashboard preview</i></sup>
   </p>
