@@ -1,11 +1,11 @@
 import * as p from '@clack/prompts';
 import chalk from 'chalk';
-import { ensureDir, writeJson } from '../../utils/fs.js';
+import { ensureDir, writeJson } from 'memoryblock';
 import {
   getWsRoot, getConfigPath, getAuthPath, isInitialized,
-} from '../../utils/config.js';
+} from 'memoryblock';
 import { GlobalConfigSchema } from '@memoryblock/types';
-import { log } from '../logger.js';
+import { log } from 'memoryblock';
 
 import { PROVIDERS, CHANNELS, PLUGINS, PROVIDER_AUTH, CHANNEL_AUTH } from '../constants.js';
 

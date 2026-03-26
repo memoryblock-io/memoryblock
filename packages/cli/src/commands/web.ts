@@ -1,7 +1,7 @@
 import {
     isInitialized,
-} from '../../utils/config.js';
-import { log } from '../logger.js';
+} from 'memoryblock';
+import { log } from 'memoryblock';
 import { DEFAULT_PORT } from '../constants.js';
 
 const API_PKG = '@memoryblock/api';

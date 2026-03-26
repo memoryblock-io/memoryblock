@@ -1,6 +1,6 @@
-import { loadGlobalConfig, resolveBlockPath, loadBlockConfig, saveBlockConfig } from '../../utils/config.js';
-import { pathExists } from '../../utils/fs.js';
-import { log } from '../logger.js';
+import { loadGlobalConfig, resolveBlockPath, loadBlockConfig, saveBlockConfig } from 'memoryblock';
+import { pathExists } from 'memoryblock';
+import { log } from 'memoryblock';
 import { join } from 'node:path';
 
 type PermissionScope = 'block' | 'workspace' | 'system';

@@ -1,10 +1,10 @@
-import { log } from '../logger.js';
-import { loadGlobalConfig, resolveBlockPath } from '../../utils/config.js';
+import { log } from 'memoryblock';
+import { loadGlobalConfig, resolveBlockPath } from 'memoryblock';
 import { promises as fsp } from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import chalk from 'chalk';
-import { FILE_TEMPLATES } from '../../engine/prompts.js';
+import { FILE_TEMPLATES } from 'memoryblock';
 
 /**
  * mblk reset <block>        — Light cleanup: reset memory, pulse, costs, session

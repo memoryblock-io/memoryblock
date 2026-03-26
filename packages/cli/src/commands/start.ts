@@ -3,12 +3,12 @@ import chalk from 'chalk';
 import {
     loadGlobalConfig, loadBlockConfig, loadAuth, resolveBlockPath, isInitialized,
     saveBlockConfig, resolveBlocksDir, loadPulseState, savePulseState,
-} from '../../utils/config.js';
+} from 'memoryblock';
 import { t } from '@memoryblock/locale';
-import { Monitor } from '../../engine/monitor.js';
+import { Monitor } from 'memoryblock';
 import { promises as fsp } from 'node:fs';
-import { pathExists } from '../../utils/fs.js';
-import { log } from '../logger.js';
+import { pathExists } from 'memoryblock';
+import { log } from 'memoryblock';
 import { join } from 'node:path';
 import { PROVIDERS, PLUGINS } from '../constants.js';
 

@@ -1,7 +1,7 @@
 import {
     isInitialized, getHome,
-} from '../../utils/config.js';
-import { log } from '../logger.js';
+} from 'memoryblock';
+import { log } from 'memoryblock';
 import { join } from 'node:path';
 import { promises as fsp } from 'node:fs';
 import { DEFAULT_PORT } from '../constants.js';

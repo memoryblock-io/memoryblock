@@ -1,4 +1,4 @@
-import { log } from '../logger.js';
+import { log } from 'memoryblock';
 
 const INSTALLER_PKG = '@memoryblock/plugin-installer';
 

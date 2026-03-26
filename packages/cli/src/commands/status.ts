@@ -3,9 +3,9 @@ import { join } from 'node:path';
 import chalk from 'chalk';
 import {
     loadGlobalConfig, resolveBlocksDir, loadPulseState, loadBlockConfig, isInitialized,
-} from '../../utils/config.js';
-import { pathExists } from '../../utils/fs.js';
-import { log } from '../logger.js';
+} from 'memoryblock';
+import { pathExists } from 'memoryblock';
+import { log } from 'memoryblock';
 import { t } from '@memoryblock/locale';
 import type { BlockStatus } from '@memoryblock/types';
 

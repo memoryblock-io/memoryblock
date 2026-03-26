@@ -1,5 +1,5 @@
 import * as p from '@clack/prompts';
-import { log } from '../logger.js';
+import { log } from 'memoryblock';
 
 /**
  * mblk settings <plugin> — view/edit plugin settings via CLI.

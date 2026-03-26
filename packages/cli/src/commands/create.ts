@@ -1,11 +1,11 @@
 import { join } from 'node:path';
-import { ensureDir, writeJson, atomicWrite, pathExists } from '../../utils/fs.js';
+import { ensureDir, writeJson, atomicWrite, pathExists } from 'memoryblock';
 import {
     loadGlobalConfig, resolveBlockPath, isInitialized,
-} from '../../utils/config.js';
+} from 'memoryblock';
 import { BlockConfigSchema, PulseStateSchema } from '@memoryblock/types';
-import { log } from '../logger.js';
-import { FILE_TEMPLATES } from '../../engine/prompts.js';
+import { log } from 'memoryblock';
+import { FILE_TEMPLATES } from 'memoryblock';
 
 
 // Templates moved to prompts.ts

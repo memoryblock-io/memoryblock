@@ -2,9 +2,9 @@ import { join } from 'node:path';
 import { promises as fsp } from 'node:fs';
 import * as p from '@clack/prompts';
 import chalk from 'chalk';
-import { loadGlobalConfig, resolveBlocksDir, isInitialized } from '../../utils/config.js';
-import { ensureDir, pathExists } from '../../utils/fs.js';
-import { log } from '../logger.js';
+import { loadGlobalConfig, resolveBlocksDir, isInitialized } from 'memoryblock';
+import { ensureDir, pathExists } from 'memoryblock';
+import { log } from 'memoryblock';
 import { t } from '@memoryblock/locale';
 
 /**

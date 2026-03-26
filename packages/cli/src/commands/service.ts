@@ -1,5 +1,5 @@
-import { log } from '../logger.js';
-import { getHome } from '../../utils/config.js';
+import { log } from 'memoryblock';
+import { getHome } from 'memoryblock';
 import { promises as fsp } from 'node:fs';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
