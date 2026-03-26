@@ -59,8 +59,8 @@ async function main() {
 
     // 2. Unlink global mblk
     process.stdout.write('\x1b[2m  unlinking mblk globally...\x1b[0m');
-    const corePath = path.join(process.cwd(), 'packages/core');
-    run(`npm unlink -g memoryblock`, { cwd: corePath });
+    run('npm unlink -g @memoryblock/cli');
+    run('npm unlink -g memoryblock');
     console.log(' \x1b[32m✓\x1b[0m');
 
     // 3. Remove node_modules, dist, tsbuildinfo
