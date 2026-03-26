@@ -11,6 +11,7 @@ export {
 
 export {
     getHome,
+    getWsRoot,
     getConfigPath,
     getAuthPath,
     isInitialized,
@@ -27,13 +28,14 @@ export {
 } from './utils/config.js';
 
 // Logger
-export { log } from './cli/logger.js';
+export { log } from './utils/logger.js';
 
 // Engine
 export { Monitor } from './engine/monitor.js';
 export { MemoryManager } from './engine/memory.js';
 export { Gatekeeper } from './engine/gatekeeper.js';
 export { Agent } from './engine/agent.js';
+export { FILE_TEMPLATES, SYSTEM_PROMPTS } from './engine/prompts.js';
 
 // Locale
 export { t, setLocale, registerLocale } from '@memoryblock/locale';

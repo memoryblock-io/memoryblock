@@ -1,6 +1,6 @@
 import type { LLMAdapter, LLMMessage, TokenUsage } from '@memoryblock/types';
 import { readTextSafe, atomicWrite } from '../utils/fs.js';
-import { log } from '../cli/logger.js';
+import { log } from '../utils/logger.js';
 import { join } from 'node:path';
 
 /**

@@ -8,7 +8,7 @@ import { ConversationLogger } from './conversation-log.js';
 import { CostTracker } from './cost-tracker.js';
 import { savePulseState, saveBlockConfig, loadGlobalConfig, resolveBlocksDir, getWsRoot } from '../utils/config.js';
 import { ensureDir, pathExists } from '../utils/fs.js';
-import { log } from '../cli/logger.js';
+import { log } from '../utils/logger.js';
 import { t } from '@memoryblock/locale';
 import { SYSTEM_PROMPTS } from './prompts.js';
 import { promises as fsp } from 'node:fs';

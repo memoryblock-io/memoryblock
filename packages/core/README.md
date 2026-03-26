@@ -21,7 +21,7 @@
   <!-- MENU -->
   <p>
     <h4>
-      <a href="https://memoryblock.io">View Demo</a> • 
+      <a href="https://memoryblock.io">Website</a> • 
       <a href="https://docs.memoryblock.io/getting-started/installation/">Documentation</a> • 
       <a href="https://github.com/memoryblock-io/memoryblock/issues">Report Bug</a>
     </h4>
@@ -199,6 +199,7 @@ It's a pnpm monorepo. Every package builds independently with `tsc`. No bundlers
 *   [**memoryblock**](https://www.npmjs.com/package/memoryblock) - The core engine interface and types.
 *   [**@memoryblock/daemon**](https://www.npmjs.com/package/@memoryblock/daemon) - Background daemon manager.
 *   [**@memoryblock/api**](https://www.npmjs.com/package/@memoryblock/api) - Core REST and WebSocket API server.
+*   [**@memoryblock/cli**](https://www.npmjs.com/package/@memoryblock/cli) - Command-line interface.
 
 **Integrations & Tooling**
 *   [**@memoryblock/adapters**](https://www.npmjs.com/package/@memoryblock/adapters) - LLM adapters (OpenAI, Anthropic, Bedrock, etc).

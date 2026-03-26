@@ -1,5 +1,5 @@
 import type { Channel, ApprovalRequest } from '@memoryblock/types';
-import { log } from '../cli/logger.js';
+import { log } from '../utils/logger.js';
 
 /**
  * Gatekeeper: The sovereign human approval system.
