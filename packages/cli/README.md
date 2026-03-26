@@ -13,6 +13,7 @@ This package provides the `mblk` command to deploy, manage, and monitor isolated
 *   [**@memoryblock/daemon**](https://www.npmjs.com/package/@memoryblock/daemon) - Background daemon manager.
 *   [**@memoryblock/api**](https://www.npmjs.com/package/@memoryblock/api) - Core REST and WebSocket API server.
 *   [**@memoryblock/cli**](https://www.npmjs.com/package/@memoryblock/cli) - Command-line interface.
+*   [**@memoryblock/types**](https://www.npmjs.com/package/@memoryblock/types) - Core TypeScript definitions and schemas.
 
 **Integrations & Tooling**
 *   [**@memoryblock/adapters**](https://www.npmjs.com/package/@memoryblock/adapters) - LLM adapters (OpenAI, Anthropic, Bedrock, etc).

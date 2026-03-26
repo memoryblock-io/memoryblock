@@ -16,6 +16,7 @@ This package handles:
 *   [**@memoryblock/daemon**](https://www.npmjs.com/package/@memoryblock/daemon) - Background daemon manager.
 *   [**@memoryblock/api**](https://www.npmjs.com/package/@memoryblock/api) - Core REST and WebSocket API server.
 *   [**@memoryblock/cli**](https://www.npmjs.com/package/@memoryblock/cli) - Command-line interface.
+*   [**@memoryblock/types**](https://www.npmjs.com/package/@memoryblock/types) - Core TypeScript definitions and schemas.
 
 **Integrations & Tooling**
 *   [**@memoryblock/adapters**](https://www.npmjs.com/package/@memoryblock/adapters) - LLM adapters (OpenAI, Anthropic, Bedrock, etc).
@@ -23,7 +24,6 @@ This package handles:
 *   [**@memoryblock/tools**](https://www.npmjs.com/package/@memoryblock/tools) - Standard tool definitions and schemas.
 *   [**@memoryblock/locale**](https://www.npmjs.com/package/@memoryblock/locale) - Localization strings and formatting.
 *   [**@memoryblock/web**](https://www.npmjs.com/package/@memoryblock/web) - Front-end dashboard and Web UI.
-*   [**@memoryblock/types**](https://www.npmjs.com/package/@memoryblock/types) - Core TypeScript definitions and schemas.
 
 **Plugins**
 *   [**@memoryblock/plugin-installer**](https://www.npmjs.com/package/@memoryblock/plugin-installer) - Plugin installer and registry manager.
