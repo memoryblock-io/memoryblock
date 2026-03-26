@@ -90,22 +90,32 @@ Adding a new adapter is one file. See [adapter docs](https://docs.memoryblock.io
 
 ## Quick Start
 
-**Requirements:** [Bun](https://bun.sh) ≥ 1.0 and an API key from any supported provider.
+Memoryblock is built natively for [Bun](https://bun.sh) for maximum performance, but we package a smart installer so you can get started using whatever you already have!
 
+### 1. Install memoryblock
+
+**- Option A: Bun (Recommended)**  
+This is the absolute fastest way to install:
 ```bash
-# clone and set up
-git clone https://github.com/memoryblock-io/memoryblock.git
-cd memoryblock
-pnpm dev:onboard -gl
-
-# run the setup wizard
-mblk init
-
-# start your first block
-mblk start home
+bun install -g memoryblock
 ```
 
-That's it. The wizard handles credentials, verification, and creating your first block.
+**- Option B: Node.js / NPM**
+```bash
+npm install -g memoryblock
+```
+
+### 2. Setup your ecosystem
+Run the setup wizard to verify your local environment and enter your initial provider API keys:
+```bash
+mblk init
+```
+
+### 3. Deploy your first block
+That's it! You can now start your very first personal assistant block:
+```bash
+mblk start home
+```
 
 ### Web Dashboard
 
@@ -170,22 +180,6 @@ See all supported adapters and how to write your own: [adapters](https://docs.me
 Channels are how your blocks talk to the outside world. The CLI, messaging platforms, and the web dashboard are all channels — equal citizens, not afterthoughts. Adding a new channel is a single file implementation.
 
 Supported and upcoming channels are documented in [channels](https://docs.memoryblock.io/channels/).
-
-## Architecture
-
-```
-packages/
-├── core/          # engine, CLI, schemas, monitor loop
-├── adapters/      # LLM provider adapters
-├── channels/      # messaging channel transports
-├── api/           # HTTP + WebSocket server
-├── web/           # static web dashboard
-├── tools/         # base tool registry and schema helpers
-├── daemon/        # background process management
-└── plugins/       # extensible capability modules
-```
-
-It's a pnpm monorepo. Every package builds independently with `tsc`. No bundlers, no magic.
 
 ## Community & Support
 
