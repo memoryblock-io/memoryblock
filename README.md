@@ -21,7 +21,7 @@
   <!-- MENU -->
   <p>
     <h4>
-      <a href="https://memoryblock.io">View Demo</a> • 
+      <a href="https://memoryblock.io">Website</a> • 
       <a href="https://docs.memoryblock.io/getting-started/installation/">Documentation</a> • 
       <a href="https://github.com/memoryblock-io/memoryblock/issues">Report Bug</a>
     </h4>
