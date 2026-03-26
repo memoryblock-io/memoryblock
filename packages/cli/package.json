@@ -7,10 +7,6 @@
     "dist/",
     "bin/"
   ],
-  "bin": {
-    "mblk": "./bin/mblk.js",
-    "memoryblock": "./bin/mblk.js"
-  },
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },
