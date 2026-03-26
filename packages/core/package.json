@@ -1,6 +1,6 @@
 {
   "name": "memoryblock",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "type": "module",
   "description": "Deploy isolated, multi-agent AI assistants on your local machine with extreme resource efficiency.",
   "files": [

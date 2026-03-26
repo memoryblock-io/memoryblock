@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/cli",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "type": "module",
   "description": "Command-line interface for the memoryblock ecosystem.",
   "files": [
