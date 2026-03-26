@@ -95,7 +95,7 @@ Memoryblock is built natively for [Bun](https://bun.sh) for maximum performance,
 ### 1. Install memoryblock
 
 **- Option A: Bun (Recommended)**  
-This is the absolute fastest way to install:
+If you already use Bun, this is the absolute fastest way to install:
 ```bash
 bun install -g memoryblock
 ```
