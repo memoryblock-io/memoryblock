@@ -1,4 +1,4 @@
-import { loadAuth } from 'memoryblock';
+import { loadAuth } from '@memoryblock/core';
 import type { SearchProvider, SearchResult, SearchOptions } from '../base.js';
 
 const BRAVE_API_URL = 'https://api.search.brave.com/res/v1/web/search';

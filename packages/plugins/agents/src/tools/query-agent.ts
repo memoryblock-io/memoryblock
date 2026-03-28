@@ -7,7 +7,7 @@ import { promises as fsp } from 'node:fs';
 import { 
     loadGlobalConfig, resolveBlocksDir, loadBlockConfig, loadAuth,
     Monitor
-} from 'memoryblock';
+} from '@memoryblock/core';
 
 // Quick inline OrchestratorChannel for interception
 class OrchestratorChannel {

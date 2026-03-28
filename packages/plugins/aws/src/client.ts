@@ -3,7 +3,7 @@ import {
     type BedrockRuntimeClientConfig,
 } from '@aws-sdk/client-bedrock-runtime';
 import { NodeHttpHandler } from '@smithy/node-http-handler';
-import { loadAuth } from 'memoryblock';
+import { loadAuth } from '@memoryblock/core';
 
 export interface AwsClientOptions {
     region?: string;
