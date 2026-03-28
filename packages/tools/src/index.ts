@@ -2,17 +2,21 @@ export { ToolRegistry } from './registry.js';
 export type { Tool } from './base.js';
 export { createSchema } from './base.js';
 export { fsTools } from './fs/index.js';
+export { extraFsTools } from './fs/extras.js';
 export { shellTools, isSafeCommand } from './shell/index.js';
 export { devTools } from './dev/index.js';
 export { identityTools } from './core/identity.js';
 export { channelTools } from './core/channels.js';
+export { systemTools } from './core/system.js';
 
 import { ToolRegistry } from './registry.js';
 import { fsTools } from './fs/index.js';
+import { extraFsTools } from './fs/extras.js';
 import { shellTools } from './shell/index.js';
 import { devTools } from './dev/index.js';
 import { identityTools } from './core/identity.js';
 import { channelTools } from './core/channels.js';
+import { systemTools } from './core/system.js';
 
 /**
  * Create a ToolRegistry pre-loaded with all built-in tools.
@@ -22,10 +26,12 @@ export function createDefaultRegistry(): ToolRegistry {
     
     // Core built-in tools
     for (const tool of fsTools) registry.register(tool);
+    for (const tool of extraFsTools) registry.register(tool);
     for (const tool of shellTools) registry.register(tool);
     for (const tool of devTools) registry.register(tool);
     for (const tool of identityTools) registry.register(tool);
     for (const tool of channelTools) registry.register(tool);
+    for (const tool of systemTools) registry.register(tool);
     
     return registry;
 }

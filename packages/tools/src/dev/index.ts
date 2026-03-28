@@ -35,11 +35,15 @@ function truncateOutput(output: string): string {
 
 async function runCommand(command: string, cwd: string): Promise<ToolExecutionResult> {
     try {
-        const { stdout, stderr } = await execFileAsync('/bin/sh', ['-c', command], {
+        const isWin = process.platform === 'win32';
+        const shell = isWin ? process.env.COMSPEC || 'cmd.exe' : '/bin/sh';
+        const shellArgs = isWin ? ['/c', command] : ['-c', command];
+
+        const { stdout, stderr } = await execFileAsync(shell, shellArgs, {
             cwd,
             timeout: DEV_TIMEOUT,
             maxBuffer: 2 * 1024 * 1024,
-            env: { ...process.env, HOME: process.env.HOME, FORCE_COLOR: '0' },
+            env: { ...process.env, HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE, FORCE_COLOR: '0' },
         });
         let output = '';
         if (stdout) output += stdout;
@@ -64,6 +68,7 @@ export const runLintTool: Tool = {
             [],
         ),
         requiresApproval: false,
+        requiresShell: true,
     },
     async execute(params, context): Promise<ToolExecutionResult> {
         const projectRoot = await findProjectRoot(context.workingDir || context.blockPath);
@@ -79,6 +84,7 @@ export const runBuildTool: Tool = {
         description: 'Run build command.',
         parameters: createSchema({}, []),
         requiresApproval: false,
+        requiresShell: true,
     },
     async execute(_params, context): Promise<ToolExecutionResult> {
         const projectRoot = await findProjectRoot(context.workingDir || context.blockPath);
@@ -102,6 +108,7 @@ export const runTestTool: Tool = {
             [],
         ),
         requiresApproval: false,
+        requiresShell: true,
     },
     async execute(params, context): Promise<ToolExecutionResult> {
         const projectRoot = await findProjectRoot(context.workingDir || context.blockPath);

@@ -152,7 +152,7 @@ export const createDirectoryTool: Tool = {
 export const searchFilesTool: Tool = {
     definition: {
         name: 'search_files',
-        description: 'Search for text in files using grep. Returns matching lines with file paths and line numbers.',
+        description: 'Search for text in files. Returns matching lines with file paths and line numbers.',
         parameters: createSchema(
             {
                 query: { type: 'string', description: 'Text to search for.' },
@@ -168,29 +168,92 @@ export const searchFilesTool: Tool = {
         const query = params.query as string;
         const include = params.include as string | undefined;
 
-        try {
-            const args = ['-rnI', '--color=never', '-m', '50'];
-            if (include) args.push('--include', include);
-            args.push(query, searchDir);
+        // Try grep first (fast, available on macOS/Linux)
+        if (process.platform !== 'win32') {
+            try {
+                const args = ['-rnI', '--color=never', '-m', '50'];
+                if (include) args.push('--include', include);
+                args.push(query, searchDir);
 
-            const { stdout } = await execFileAsync('grep', args, {
-                timeout: 15_000,
-                maxBuffer: 512 * 1024,
-            });
-            const output = stdout.trim();
-            if (!output) return { content: 'No matches found.', isError: false };
-            // Truncate if too many results
-            if (output.length > 20_000) {
-                return { content: output.slice(0, 20_000) + '\n...(truncated)', isError: false };
+                const { stdout } = await execFileAsync('grep', args, {
+                    timeout: 15_000,
+                    maxBuffer: 512 * 1024,
+                });
+                const output = stdout.trim();
+                if (!output) return { content: 'No matches found.', isError: false };
+                if (output.length > 20_000) {
+                    return { content: output.slice(0, 20_000) + '\n...(truncated)', isError: false };
+                }
+                return { content: output, isError: false };
+            } catch (err) {
+                const e = err as Error & { code?: number };
+                if (e.code === 1) return { content: 'No matches found.', isError: false };
+                // grep not found or failed — fall through to Node.js fallback
             }
-            return { content: output, isError: false };
-        } catch (err) {
-            const e = err as Error & { code?: number; stdout?: string };
-            if (e.code === 1) return { content: 'No matches found.', isError: false };
-            return { content: `Search failed: ${e.message}`, isError: true };
         }
+
+        // Pure Node.js fallback (works on all platforms)
+        return await nodeSearch(searchDir, query, include);
     },
 };
+
+/** Pure Node.js text search fallback for Windows and other environments. */
+async function nodeSearch(dir: string, query: string, include?: string): Promise<ToolExecutionResult> {
+    const results: string[] = [];
+    const MAX_RESULTS = 50;
+    const MAX_DEPTH = 8;
+
+    // Convert include glob to regex if present
+    let includeRegex: RegExp | null = null;
+    if (include) {
+        const pat = '^' + include.replace(/\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '.') + '$';
+        includeRegex = new RegExp(pat, 'i');
+    }
+
+    async function walk(current: string, depth: number): Promise<void> {
+        if (depth > MAX_DEPTH || results.length >= MAX_RESULTS) return;
+        try {
+            const entries = await fsp.readdir(current, { withFileTypes: true });
+            for (const entry of entries) {
+                if (results.length >= MAX_RESULTS) break;
+                if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+                const fullPath = join(current, entry.name);
+
+                if (entry.isDirectory()) {
+                    await walk(fullPath, depth + 1);
+                } else {
+                    // Check include filter
+                    if (includeRegex && !includeRegex.test(entry.name)) continue;
+                    // Skip binary files by extension
+                    const ext = entry.name.split('.').pop()?.toLowerCase() || '';
+                    const binaryExts = ['png', 'jpg', 'jpeg', 'gif', 'ico', 'woff', 'woff2', 'ttf', 'eot', 'zip', 'gz', 'tar', 'pdf'];
+                    if (binaryExts.includes(ext)) continue;
+
+                    try {
+                        const content = await fsp.readFile(fullPath, 'utf-8');
+                        const lines = content.split('\n');
+                        for (let i = 0; i < lines.length && results.length < MAX_RESULTS; i++) {
+                            if (lines[i].includes(query)) {
+                                results.push(`${fullPath}:${i + 1}:${lines[i].trim()}`);
+                            }
+                        }
+                    } catch { /* unreadable file */ }
+                }
+            }
+        } catch { /* permission denied */ }
+    }
+
+    try {
+        await walk(dir, 0);
+        if (results.length === 0) return { content: 'No matches found.', isError: false };
+        let output = results.join('\n');
+        if (results.length >= MAX_RESULTS) output += '\n...(capped at 50 results)';
+        if (output.length > 20_000) output = output.slice(0, 20_000) + '\n...(truncated)';
+        return { content: output, isError: false };
+    } catch (err) {
+        return { content: `Search failed: ${(err as Error).message}`, isError: true };
+    }
+}
 
 // ===== replace_in_file =====
 export const replaceInFileTool: Tool = {

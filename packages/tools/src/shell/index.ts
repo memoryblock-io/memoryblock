@@ -36,6 +36,7 @@ export const executeCommandTool: Tool = {
         ),
         // Dynamic approval: overridden at dispatch time based on command safety
         requiresApproval: true,
+        requiresShell: true,
     },
     async execute(params, context): Promise<ToolExecutionResult> {
         const command = params.command as string;
@@ -63,11 +64,15 @@ export const executeCommandTool: Tool = {
         // scope === 'system' — use whatever workingDir is set
 
         try {
-            const { stdout, stderr } = await execFileAsync('/bin/sh', ['-c', command], {
+            const isWin = process.platform === 'win32';
+            const shell = isWin ? process.env.COMSPEC || 'cmd.exe' : '/bin/sh';
+            const shellArgs = isWin ? ['/c', command] : ['-c', command];
+
+            const { stdout, stderr } = await execFileAsync(shell, shellArgs, {
                 cwd,
                 timeout,
                 maxBuffer: 2 * 1024 * 1024,
-                env: { ...process.env, HOME: process.env.HOME },
+                env: { ...process.env, HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE },
             });
 
             let output = '';

@@ -52,9 +52,37 @@ export class ToolRegistry {
         // Handle the meta-tool
         if (name === 'list_tools_available') {
             const tools = this.listTools();
-            const listing = tools.map((t) => `- **${t.name}**: ${t.description}`).join('\n');
+            const scope = context.permissions?.scope || 'block';
+            const hasShell = context.permissions?.allowShell || scope === 'system';
+
+            const available: string[] = [];
+            const restricted: string[] = [];
+
+            for (const t of tools) {
+                const needsScope = t.requiredScope || 'block';
+                const needsShell = t.requiresShell || false;
+                const scopeOrder = { block: 0, workspace: 1, system: 2 };
+                const hasSufficientScope = scopeOrder[scope] >= scopeOrder[needsScope];
+                const hasShellAccess = !needsShell || hasShell;
+
+                if (hasSufficientScope && hasShellAccess) {
+                    available.push(`- **${t.name}**: ${t.description}`);
+                } else {
+                    const reason = needsShell && !hasShell ? 'requires shell access' : `requires scope: ${needsScope}`;
+                    restricted.push(`- ~~${t.name}~~ *(${reason})*`);
+                }
+            }
+
+            let listing = `Your scope: **${scope}** | Shell: **${hasShell ? 'yes' : 'no'}**\n\n`;
+            listing += `## Available (${available.length})\n${available.join('\n')}\n`;
+
+            if (restricted.length > 0) {
+                listing += `\n## Restricted (${restricted.length})\n${restricted.join('\n')}`;
+                listing += `\n\n*To unlock restricted tools, ask the user to run: \`mblk superblock ${context.blockName}\`*`;
+            }
+
             return {
-                content: `You have ${tools.length} tools available:\n\n${listing}\n\nCall any tool by name with the required parameters.`,
+                content: listing,
                 isError: false,
             };
         }
