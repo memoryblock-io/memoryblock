@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/adapters",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "type": "module",
   "description": "LLM adapters interface for memoryblock.",
   "main": "./dist/index.js",
