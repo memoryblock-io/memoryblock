@@ -1,6 +1,6 @@
 import { Bot, InlineKeyboard } from 'grammy';
 import type { Channel, ChannelMessage, ApprovalRequest } from '@memoryblock/types';
-import { loadAuth, log, t } from 'memoryblock';
+import { loadAuth, log, t } from '@memoryblock/core';
 
 /**
  * Telegram Channel — interactive bot-based communication via Grammy.
