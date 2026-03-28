@@ -1,6 +1,6 @@
 {
   "name": "memoryblock",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "type": "module",
   "description": "Deploy isolated, multi-agent AI assistants on your local machine with extreme resource efficiency.",
   "main": "./dist/entry.js",
@@ -31,21 +31,19 @@
     "@memoryblock/core": "workspace:*",
     "@memoryblock/types": "workspace:*",
     "@memoryblock/locale": "workspace:*",
-    "@clack/prompts": "^1.1.0",
-    "chalk": "^5.4.0",
-    "commander": "^13.0.0"
-  },
-  "optionalDependencies": {
-    "@memoryblock/adapters": "workspace:*",
-    "@memoryblock/api": "workspace:*",
-    "@memoryblock/channels": "workspace:*",
     "@memoryblock/daemon": "workspace:*",
+    "@memoryblock/api": "workspace:*",
     "@memoryblock/tools": "workspace:*",
+    "@memoryblock/adapters": "workspace:*",
+    "@memoryblock/channels": "workspace:*",
     "@memoryblock/web": "workspace:*",
     "@memoryblock/plugin-agents": "workspace:*",
     "@memoryblock/plugin-installer": "workspace:*",
     "@memoryblock/plugin-web-search": "workspace:*",
-    "@memoryblock/plugin-fetch-webpage": "workspace:*"
+    "@memoryblock/plugin-fetch-webpage": "workspace:*",
+    "@clack/prompts": "^1.1.0",
+    "chalk": "^5.4.0",
+    "commander": "^13.0.0"
   },
   "devDependencies": {
     "@types/bun": "^1.3.11"
