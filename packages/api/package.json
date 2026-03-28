@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/api",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "type": "module",
   "description": "Core API server for memoryblock daemon and dashboard.",
   "main": "./dist/index.js",
@@ -20,10 +20,11 @@
   },
   "devDependencies": {
     "@memoryblock/core": "workspace:*",
-    "@types/bun": "^1.3.11"
+    "@types/ws": "^8.18.1"
   },
   "dependencies": {
-    "@memoryblock/plugin-installer": "workspace:*"
+    "@memoryblock/plugin-installer": "workspace:*",
+    "ws": "^8.18.1"
   },
   "peerDependencies": {
     "@memoryblock/core": "workspace:*"

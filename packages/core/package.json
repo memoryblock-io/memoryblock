@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/core",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "type": "module",
   "description": "Core engine for memoryblock agents and workspaces.",
   "main": "./dist/index.js",
@@ -28,7 +28,7 @@
     "chalk": "^5.4.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "keywords": [
     "memoryblock",

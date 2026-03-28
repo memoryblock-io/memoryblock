@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/plugin-web-search",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "type": "module",
   "description": "Official plugin providing web search capabilities to memoryblock.",
   "main": "./dist/index.js",
