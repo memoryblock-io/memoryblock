@@ -42,20 +42,22 @@ async function writeCache(latest: string): Promise<void> {
  * Check if a newer version of memoryblock is available on npm.
  * Returns { current, latest, updateAvailable } or null on error.
  */
-export async function checkForUpdate(currentVersion: string): Promise<{
+export async function checkForUpdate(currentVersion: string, skipCache = false): Promise<{
     current: string;
     latest: string;
     updateAvailable: boolean;
 } | null> {
     try {
-        // Check cache first
-        const cached = await readCache();
-        if (cached) {
-            return {
-                current: currentVersion,
-                latest: cached.latest,
-                updateAvailable: isNewer(cached.latest, currentVersion),
-            };
+        // Check cache first (unless skipCache is set)
+        if (!skipCache) {
+            const cached = await readCache();
+            if (cached) {
+                return {
+                    current: currentVersion,
+                    latest: cached.latest,
+                    updateAvailable: isNewer(cached.latest, currentVersion),
+                };
+            }
         }
 
         // Fetch from npm (with timeout)

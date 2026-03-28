@@ -382,6 +382,60 @@ program
         }
     });
 
+program
+    .command('update')
+    .description('Update memoryblock to the latest version and restart all services.')
+    .action(async () => {
+        const chalk = (await import('chalk')).default;
+        const { execSync } = await import('node:child_process');
+        const { checkForUpdate } = await import('./utils/version-check.js');
+
+        try {
+            // 1. Check if update is actually available
+            console.log('');
+            console.log(chalk.hex('#7C3AED')('  ⬡ memoryblock'), ' update\n');
+            console.log(chalk.dim('  Checking for updates...'));
+
+            const result = await checkForUpdate(version, true);
+            if (!result?.updateAvailable) {
+                console.log(chalk.green('  ✓'), `  Already on the latest version (${version}).`);
+                console.log('');
+                return;
+            }
+
+            console.log(`  Update available: ${chalk.dim(result.current)} → ${chalk.green(result.latest)}\n`);
+
+            // 2. Install the new version
+            console.log(chalk.dim('  Installing...'));
+            execSync('npm install -g memoryblock 2>&1', {
+                timeout: 120_000,
+                stdio: 'inherit',
+            });
+            console.log(chalk.green('  ✓'), '  Package updated.\n');
+
+            // 3. Graceful shutdown (blocks save memory/session/costs via SIGTERM)
+            console.log(chalk.dim('  Restarting services...'));
+            try {
+                await shutdownCommand();
+            } catch { /* may already be stopped */ }
+
+            // 4. Wait for processes to exit cleanly
+            await new Promise(r => setTimeout(r, 3000));
+
+            // 5. Restart everything with the new code
+            try {
+                await restartCommand({ port: DEFAULT_PORT });
+            } catch { /* restart command outputs its own messages */ }
+
+            console.log('');
+            console.log(chalk.green('  ✓'), `  memoryblock updated to ${chalk.bold(result.latest)}`);
+            console.log(chalk.dim('      All services restarted with new code.\n'));
+        } catch (err) {
+            log.error(`Update failed: ${(err as Error).message}`);
+            process.exit(1);
+        }
+    });
+
 program.parse();
 
 // Non-blocking version check — runs after command completes
@@ -389,7 +443,7 @@ if (process.stdout.isTTY && !process.argv.includes('--version')) {
     checkForUpdate(version).then(result => {
         if (result?.updateAvailable) {
             console.log(`\n  \x1b[33m⬡\x1b[0m Update available: \x1b[2m${result.current}\x1b[0m → \x1b[32m${result.latest}\x1b[0m`);
-            console.log(`    Run \x1b[2mnpm install -g memoryblock\x1b[0m to update\n`);
+            console.log(`    Run \x1b[36mmblk update\x1b[0m to update\n`);
         }
     }).catch(() => {});
 }
