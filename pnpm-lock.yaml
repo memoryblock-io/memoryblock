@@ -100,26 +100,6 @@ importers:
       '@clack/prompts':
         specifier: ^1.1.0
         version: 1.1.0
-      '@memoryblock/core':
-        specifier: workspace:*
-        version: link:../core
-      '@memoryblock/locale':
-        specifier: workspace:*
-        version: link:../locale
-      '@memoryblock/types':
-        specifier: workspace:*
-        version: link:../types
-      chalk:
-        specifier: ^5.4.0
-        version: 5.6.2
-      commander:
-        specifier: ^13.0.0
-        version: 13.1.0
-    devDependencies:
-      '@types/bun':
-        specifier: ^1.3.11
-        version: 1.3.11
-    optionalDependencies:
       '@memoryblock/adapters':
         specifier: workspace:*
         version: link:../adapters
@@ -129,9 +109,15 @@ importers:
       '@memoryblock/channels':
         specifier: workspace:*
         version: link:../channels
+      '@memoryblock/core':
+        specifier: workspace:*
+        version: link:../core
       '@memoryblock/daemon':
         specifier: workspace:*
         version: link:../daemon
+      '@memoryblock/locale':
+        specifier: workspace:*
+        version: link:../locale
       '@memoryblock/plugin-agents':
         specifier: workspace:*
         version: link:../plugins/agents
@@ -147,9 +133,22 @@ importers:
       '@memoryblock/tools':
         specifier: workspace:*
         version: link:../tools
+      '@memoryblock/types':
+        specifier: workspace:*
+        version: link:../types
       '@memoryblock/web':
         specifier: workspace:*
         version: link:../web
+      chalk:
+        specifier: ^5.4.0
+        version: 5.6.2
+      commander:
+        specifier: ^13.0.0
+        version: 13.1.0
+    devDependencies:
+      '@types/bun':
+        specifier: ^1.3.11
+        version: 1.3.11
 
   packages/plugins/agents:
     dependencies:
