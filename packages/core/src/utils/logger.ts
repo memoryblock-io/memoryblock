@@ -12,7 +12,7 @@ export const log = {
  █░▀░█ ██▄ █░▀░█ █▄█ █▀▄ ░█░ █▄█ █▄▄ █▄█ █▄▄ █░█ 
 `;
         /* eslint-enable no-irregular-whitespace */
-        console.log(chalk.hex('#805AD5').bold(ascii));
+        console.log(chalk.hex('#7C3AED').bold(ascii));
     },
     info(message: string): void {
         console.log(`${chalk.blue('ℹ')} ${message}`);

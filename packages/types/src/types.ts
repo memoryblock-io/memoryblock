@@ -144,6 +144,10 @@ export interface ToolDefinition {
     description: string;
     parameters: Record<string, unknown>;
     requiresApproval: boolean;
+    /** Minimum permission scope needed to use this tool. Defaults to 'block'. */
+    requiredScope?: PermissionScope;
+    /** If true, tool requires allowShell permission. */
+    requiresShell?: boolean;
 }
 
 export interface ToolContext {

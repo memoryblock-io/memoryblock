@@ -1,12 +1,75 @@
 import { join, extname } from 'node:path';
 import { readFile, stat } from 'node:fs/promises';
 import { watch, type FSWatcher } from 'node:fs';
-import type { Server, ServerWebSocket } from 'bun';
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { WebSocketServer } from 'ws';
+import type { WebSocket } from 'ws';
 import {
     loadGlobalConfig, resolveBlocksDir,
     loadBlockConfig, loadAuth, saveGlobalConfig,
 } from '@memoryblock/core';
 import { validateAuthToken } from './auth.js';
+
+// ─── Runtime Compatibility Layer ─────────────────────────────────────
+// These helpers bridge node:http's IncomingMessage/ServerResponse with
+// the Web API Response pattern used by our handlers.
+// Works identically on both Node.js ≥20 and Bun.
+
+/** Minimal request interface compatible with both Node.js and Bun runtimes. */
+interface CompatRequest {
+    readonly method: string;
+    readonly url: string;
+    readonly headers: { get(name: string): string | null };
+    json(): Promise<any>;
+}
+
+function readBody(req: IncomingMessage): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const chunks: Buffer[] = [];
+        req.on('data', (chunk: Buffer) => chunks.push(chunk));
+        req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+        req.on('error', reject);
+    });
+}
+
+function toCompatRequest(req: IncomingMessage, body: string): CompatRequest {
+    const fullUrl = `http://${req.headers.host || 'localhost'}${req.url || '/'}`;
+    return {
+        method: req.method || 'GET',
+        url: fullUrl,
+        headers: {
+            get(name: string): string | null {
+                const val = req.headers[name.toLowerCase()];
+                return Array.isArray(val) ? val[0] : val ?? null;
+            }
+        },
+        async json() {
+            return JSON.parse(body);
+        }
+    };
+}
+
+async function sendResponse(response: Response, res: ServerResponse): Promise<void> {
+    const headers: Record<string, string> = {};
+    response.headers.forEach((value, key) => { headers[key] = value; });
+    res.writeHead(response.status, headers);
+    if (response.body) {
+        const reader = response.body.getReader();
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                res.write(value);
+            }
+        } finally {
+            res.end();
+        }
+    } else {
+        res.end();
+    }
+}
+
+// ─── Types & Constants ───────────────────────────────────────────────
 
 export interface ApiServerConfig {
     port: number;
@@ -32,14 +95,18 @@ const MIME_TYPES: Record<string, string> = {
 const API_VERSION = '0.3.0-alpha';
 
 /**
- * Built-in HTTP & WebSocket Server using Bun.serve.
- * Zero external dependencies.
+ * Built-in HTTP & WebSocket Server.
+ * Uses node:http + ws for universal runtime support (Node.js ≥20, Bun).
+ * Zero framework dependencies.
  */
 export class ApiServer {
-    private server: Server<WsData> | null = null;
+    private server: ReturnType<typeof createServer> | null = null;
+    private wss: WebSocketServer | null = null;
     private config: ApiServerConfig;
     // Map of blockName -> Set of WebSocket clients
-    private subscribers: Map<string, Set<ServerWebSocket<WsData>>> = new Map();
+    private subscribers: Map<string, Set<WebSocket>> = new Map();
+    // Per-connection data (replaces Bun's ws.data pattern)
+    private wsData: WeakMap<WebSocket, WsData> = new WeakMap();
     // Map of blockName -> fs.FSWatcher
     private watchers: Map<string, FSWatcher> = new Map();
 
@@ -47,7 +114,7 @@ export class ApiServer {
         this.config = config;
     }
 
-    private extractToken(req: Request): string | null {
+    private extractToken(req: CompatRequest): string | null {
         const auth = req.headers.get('authorization');
         if (auth?.startsWith('Bearer ')) return auth.slice(7);
         const url = new URL(req.url);
@@ -86,6 +153,17 @@ export class ApiServer {
         return this.json({ error: message, status }, status);
     }
 
+    /** Simple semver comparison: is `a` newer than `b`? */
+    private isNewer(a: string, b: string): boolean {
+        const pa = a.split('.').map(Number);
+        const pb = b.split('.').map(Number);
+        for (let i = 0; i < 3; i++) {
+            if ((pa[i] || 0) > (pb[i] || 0)) return true;
+            if ((pa[i] || 0) < (pb[i] || 0)) return false;
+        }
+        return false;
+    }
+
     async start(): Promise<void> {
         // eslint-disable-next-line @typescript-eslint/no-this-alias
         const self = this;
@@ -93,54 +171,48 @@ export class ApiServer {
         // Setup initial watchers for existing blocks
         this.initWatchers().catch(console.error);
 
-        this.server = Bun.serve({
-            port: this.config.port,
-            async fetch(req: Request, server: Server<WsData>) {
-                // CORS preflight
-                if (req.method === 'OPTIONS') {
-                    return new Response(null, {
-                        status: 204,
-                        headers: {
-                            'Access-Control-Allow-Origin': '*',
-                            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                            'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-                        }
-                    });
-                }
+        // ─── HTTP Server (node:http — works on Node.js and Bun) ──────
+        this.server = createServer(async (nodeReq: IncomingMessage, nodeRes: ServerResponse) => {
+            try {
+                // Read body for non-GET/HEAD requests
+                const body = (nodeReq.method === 'GET' || nodeReq.method === 'HEAD')
+                    ? ''
+                    : await readBody(nodeReq);
 
+                const req = toCompatRequest(nodeReq, body);
                 const url = new URL(req.url);
                 const path = url.pathname;
 
-                // Plugin actions: /api/plugins/*
-        if (path.startsWith('/api/plugins')) {
-            const pluginMatch = path.match(/^\/api\/plugins(?:\/([^/]+)\/(install|uninstall|settings))?$/);
-            if (pluginMatch) {
-                if (req.method === 'GET' && !pluginMatch[1]) {
-                    return await self.handleGetPlugins();
+                // CORS preflight
+                if (req.method === 'OPTIONS') {
+                    nodeRes.writeHead(204, {
+                        'Access-Control-Allow-Origin': '*',
+                        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                        'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+                    });
+                    nodeRes.end();
+                    return;
                 }
-                if (req.method === 'POST' && pluginMatch[2] === 'install') {
-                    return await self.handleInstallPlugin(pluginMatch[1]);
-                }
-                if (req.method === 'DELETE' && pluginMatch[2] === 'uninstall') {
-                    return await self.handleUninstallPlugin(pluginMatch[1]);
-                }
-                if (req.method === 'POST' && pluginMatch[2] === 'settings') {
-                    return await self.handlePluginSettings(pluginMatch[1], req);
-                }
-            }
-        }
 
-        // WebSocket Upgrade
-                if (path === '/api/ws') {
-                    const token = self.extractToken(req);
-                    const currentToken = await self.getDynamicToken();
-                    if (!token || !validateAuthToken(token, currentToken)) {
-                        return self.error(401, 'Unauthorized');
+                // Plugin actions: /api/plugins/*
+                if (path.startsWith('/api/plugins')) {
+                    const pluginMatch = path.match(/^\/api\/plugins(?:\/([^/]+)\/(install|uninstall|settings))?$/);
+                    if (pluginMatch) {
+                        let response: Response | null = null;
+                        if (req.method === 'GET' && !pluginMatch[1]) {
+                            response = await self.handleGetPlugins();
+                        } else if (req.method === 'POST' && pluginMatch[2] === 'install') {
+                            response = await self.handleInstallPlugin(pluginMatch[1]);
+                        } else if (req.method === 'DELETE' && pluginMatch[2] === 'uninstall') {
+                            response = await self.handleUninstallPlugin(pluginMatch[1]);
+                        } else if (req.method === 'POST' && pluginMatch[2] === 'settings') {
+                            response = await self.handlePluginSettings(pluginMatch[1], req);
+                        }
+                        if (response) {
+                            await sendResponse(response, nodeRes);
+                            return;
+                        }
                     }
-                    if (server.upgrade(req, { data: {} })) {
-                        return undefined as unknown as Response; // Bun expects void-like return
-                    }
-                    return self.error(500, 'WebSocket upgrade failed');
                 }
 
                 // Auth check for API routes
@@ -148,61 +220,96 @@ export class ApiServer {
                     const token = self.extractToken(req);
                     const currentToken = await self.getDynamicToken();
                     if (!token || !validateAuthToken(token, currentToken)) {
-                        return self.error(401, 'Unauthorized');
+                        await sendResponse(self.error(401, 'Unauthorized'), nodeRes);
+                        return;
                     }
                 }
 
                 // API Routes
                 try {
                     const response = await self.routeRequest(req, url, path);
-                    if (response) return response;
+                    if (response) {
+                        await sendResponse(response, nodeRes);
+                        return;
+                    }
                 } catch (err) {
-                    return self.error(500, `Internal error: ${(err as Error).message}`);
+                    await sendResponse(self.error(500, `Internal error: ${(err as Error).message}`), nodeRes);
+                    return;
                 }
 
                 // Static Web UI Serving
                 if (self.config.webRoot && req.method === 'GET') {
-                    return await self.serveStatic(path);
+                    await sendResponse(await self.serveStatic(path), nodeRes);
+                    return;
                 }
 
-                return self.error(404, `Not found: ${path}`);
-            },
-            websocket: {
-                open(_ws: ServerWebSocket<WsData>) {
-                    // client connected
-                },
-                message(ws: ServerWebSocket<WsData>, message: string | Buffer) {
-                    try {
-                        const msg = JSON.parse(typeof message === 'string' ? message : message.toString()) as {
-                            type?: string;
-                            block?: string;
-                        };
-                        if (msg.type === 'subscribe' && msg.block) {
-                            ws.data = { ...ws.data, block: msg.block };
-                            if (!self.subscribers.has(msg.block)) {
-                                self.subscribers.set(msg.block, new Set());
-                            }
-                            self.subscribers.get(msg.block)!.add(ws);
-                            
-                            // Send initial refresh tick
-                            ws.send(JSON.stringify({ type: 'refresh' }));
-                        }
-                    } catch (err) {
-                        console.error('WebSocket message error:', err);
-                    }
-                },
-                close(ws: ServerWebSocket<WsData>) {
-                    const block = ws.data?.block;
-                    if (block && self.subscribers.has(block)) {
-                        self.subscribers.get(block)!.delete(ws);
-                    }
-                }
+                await sendResponse(self.error(404, `Not found: ${path}`), nodeRes);
+            } catch (err) {
+                nodeRes.writeHead(500, { 'Content-Type': 'application/json' });
+                nodeRes.end(JSON.stringify({ error: (err as Error).message }));
             }
+        });
+
+        // ─── WebSocket Server (ws package — works on Node.js and Bun) ──
+        this.wss = new WebSocketServer({ noServer: true });
+
+        this.server.on('upgrade', async (req: IncomingMessage, socket, head) => {
+            const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+            if (url.pathname !== '/api/ws') {
+                socket.destroy();
+                return;
+            }
+
+            // Auth check for WebSocket connections
+            const auth = req.headers['authorization'];
+            const token = auth?.startsWith('Bearer ') ? auth.slice(7) : url.searchParams.get('token');
+            const currentToken = await self.getDynamicToken();
+            if (!token || !validateAuthToken(token, currentToken)) {
+                socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+                socket.destroy();
+                return;
+            }
+
+            self.wss!.handleUpgrade(req, socket, head, (ws) => {
+                self.wss!.emit('connection', ws);
+            });
+        });
+
+        this.wss.on('connection', (ws: WebSocket) => {
+            ws.on('message', (raw) => {
+                try {
+                    const msg = JSON.parse(String(raw)) as { type?: string; block?: string };
+                    if (msg.type === 'subscribe' && msg.block) {
+                        self.wsData.set(ws, { block: msg.block });
+                        if (!self.subscribers.has(msg.block)) {
+                            self.subscribers.set(msg.block, new Set());
+                        }
+                        self.subscribers.get(msg.block)!.add(ws);
+
+                        // Send initial refresh tick
+                        ws.send(JSON.stringify({ type: 'refresh' }));
+                    }
+                } catch (err) {
+                    console.error('WebSocket message error:', err);
+                }
+            });
+
+            ws.on('close', () => {
+                const data = self.wsData.get(ws);
+                if (data?.block && self.subscribers.has(data.block)) {
+                    self.subscribers.get(data.block)!.delete(ws);
+                }
+            });
+        });
+
+        // Start listening
+        await new Promise<void>((resolve) => {
+            this.server!.listen(this.config.port, () => resolve());
         });
     }
 
     /** Route an API request to the correct handler. Returns null if no route matched. */
-    private async routeRequest(req: Request, url: URL, path: string): Promise<Response | null> {
+    private async routeRequest(req: CompatRequest, url: URL, path: string): Promise<Response | null> {
         if (req.method === 'GET' && path === '/api/health') {
             return this.json({ status: 'ok', version: API_VERSION });
         }
@@ -211,6 +318,49 @@ export class ApiServer {
             const token = this.extractToken(req);
             const valid = token ? validateAuthToken(token, this.config.authToken) : false;
             return this.json({ authenticated: valid });
+        }
+
+        // GET /api/version — check for updates (cached, non-blocking)
+        if (req.method === 'GET' && path === '/api/version') {
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 5000);
+                const res = await fetch('https://registry.npmjs.org/memoryblock/latest', {
+                    signal: controller.signal,
+                    headers: { 'Accept': 'application/json' },
+                });
+                clearTimeout(timeout);
+                if (res.ok) {
+                    const data = await res.json() as { version: string };
+                    return this.json({
+                        current: API_VERSION,
+                        latest: data.version,
+                        updateAvailable: this.isNewer(data.version, API_VERSION),
+                    });
+                }
+            } catch { /* network error */ }
+            return this.json({ current: API_VERSION, latest: API_VERSION, updateAvailable: false });
+        }
+
+        // POST /api/update — trigger self-update (npm install -g memoryblock)
+        if (req.method === 'POST' && path === '/api/update') {
+            try {
+                const { execSync } = await import('node:child_process');
+                const output = execSync('npm install -g memoryblock 2>&1', {
+                    timeout: 120_000,
+                    encoding: 'utf-8',
+                });
+                // Schedule a graceful restart after response is sent
+                setTimeout(() => {
+                    process.exit(0); // systemd/launchd will restart us
+                }, 2000);
+                return this.json({ success: true, output: output.trim() });
+            } catch (err) {
+                return this.json({
+                    success: false,
+                    error: (err as Error).message,
+                }, 500);
+            }
         }
 
         if (req.method === 'GET' && path === '/api/blocks') {
@@ -291,8 +441,11 @@ export class ApiServer {
     }
 
     async stop(): Promise<void> {
+        if (this.wss) {
+            this.wss.close();
+        }
         if (this.server) {
-            this.server.stop();
+            this.server.close();
         }
         for (const watcher of this.watchers.values()) {
             watcher.close();
@@ -408,7 +561,7 @@ export class ApiServer {
         return this.json({ config, memory, monitor, costs, pulse });
     }
 
-    private async handleCreateBlock(req: Request): Promise<Response> {
+    private async handleCreateBlock(req: CompatRequest): Promise<Response> {
         try {
             const body = await req.json() as { name: string; description?: string };
             const CREATE_PKG = 'memoryblock/commands';
@@ -483,7 +636,7 @@ export class ApiServer {
      * Uses atomic write (temp file + rename) to prevent the daemon from reading
      * a half-written file.
      */
-    private async handleChat(blockName: string, req: Request): Promise<Response> {
+    private async handleChat(blockName: string, req: CompatRequest): Promise<Response> {
         try {
             const body = await req.json() as { message: string };
             if (!body.message || typeof body.message !== 'string') {
@@ -566,7 +719,7 @@ export class ApiServer {
         }
     }
 
-    private async handleStream(blockName: string, req: Request): Promise<Response> {
+    private async handleStream(blockName: string, req: CompatRequest): Promise<Response> {
         try {
             const body = await req.json() as { chunk?: string };
             if (body.chunk) {
@@ -688,7 +841,7 @@ export class ApiServer {
         return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     }
 
-    private async handlePluginSettings(pluginId: string, req: Request): Promise<Response> {
+    private async handlePluginSettings(pluginId: string, req: CompatRequest): Promise<Response> {
         try {
             const body = await req.json();
             const { PluginInstaller } = await import('@memoryblock/plugin-installer');
@@ -841,7 +994,7 @@ export class ApiServer {
         }
     }
 
-    private async handleUpdateGlobalConfig(req: Request): Promise<Response> {
+    private async handleUpdateGlobalConfig(req: CompatRequest): Promise<Response> {
         try {
             const updates = await req.json() as Record<string, unknown>;
             const globalConfig = await loadGlobalConfig();
@@ -883,7 +1036,7 @@ export class ApiServer {
         }
     }
 
-    private async handleUpdateBlockConfig(name: string, req: Request): Promise<Response> {
+    private async handleUpdateBlockConfig(name: string, req: CompatRequest): Promise<Response> {
         try {
             const globalConfig = await loadGlobalConfig();
             const blockPath = join(resolveBlocksDir(globalConfig), name);
