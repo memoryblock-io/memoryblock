@@ -1,6 +1,6 @@
 {
   "name": "memoryblock-monorepo",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "private": true,
   "description": "Deploy isolated, multi-agent AI assistants on your local machine with extreme resource efficiency.",
   "scripts": {
@@ -28,7 +28,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.27.0",
-    "@types/node": "^18.0.0",
+    "@types/node": "^20.0.0",
     "eslint": "^9.39.3",
     "prettier": "^3.8.1",
     "typescript": "^5.7.0",
@@ -36,7 +36,7 @@
   },
   "engines": {
     "bun": ">=1.0.0",
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "packageManager": "pnpm@10.33.0",
   "pnpm": {
