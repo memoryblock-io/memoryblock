@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/api",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "type": "module",
   "description": "Core API server for memoryblock daemon and dashboard.",
   "main": "./dist/index.js",

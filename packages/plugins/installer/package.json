@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/plugin-installer",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "type": "module",
   "description": "Official plugin installer and registry manager for memoryblock.",
   "main": "./dist/index.js",
