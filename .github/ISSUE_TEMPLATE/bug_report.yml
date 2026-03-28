@@ -16,20 +16,19 @@ body:
     validations:
       required: true
   - type: input
-    id: node-version
+    id: bun-version
     attributes:
-      label: Node.js version
-      placeholder: v20.x
+      label: Bun & Node.js version
+      description: What version of Bun and Node are you running? (e.g. Bun 1.2.0, Node v20)
+      placeholder: Bun 1.x, Node v20.x
     validations:
       required: true
-  - type: dropdown
+  - type: input
     id: os
     attributes:
-      label: OS/Browser
-      options:
-        - macOS / Safari
-        - Windows / Edge
-        - Linux / Chrome
+      label: Operating System
+      description: What OS are you running the daemon on? (e.g. macOS Sequoia, Ubuntu 22.04)
+      placeholder: macOS Sequoia
     validations:
       required: true
   - type: textarea
@@ -45,10 +44,10 @@ body:
       label: Steps to Reproduce
       description: Please provide the steps to reproduce the behavior.
       placeholder: |
-        1. Run 'memoryblock init'
-        2. Add configuration...
-        3. Run 'memoryblock build'
-        4. See error...
+        1. Run `mblk init`
+        2. Set config block to...
+        3. Run `mblk start home`
+        4. See error output...
     validations:
       required: true
   - type: textarea

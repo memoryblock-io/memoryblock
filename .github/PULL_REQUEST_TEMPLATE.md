@@ -10,6 +10,7 @@ Fixes # (issue)
 - [ ] 📝 Documentation update
 
 ## Checklist:
+- [ ] I have successfully run `pnpm dev:verify` locally to validate the build tree
 - [ ] I have performed a self-review of my own code
 - [ ] I have commented my code, particularly in hard-to-understand areas
 - [ ] I have made corresponding changes to the documentation

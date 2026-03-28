@@ -55,14 +55,18 @@ This runs the script using **Bun** referencing your local edits in real time!
 
 ```text
 packages/
-  ├── core/             # Core Engine, Memory, and CLI (`mblk`)
-  ├── daemon/           # Background daemon process hosting
-  ├── adapters/         # LLM models (OpenAI, Gemini, Anthropic)
-  ├── channels/         # Communication channels (Telegram, Web)
-  ├── plugins/          # Built-in plugins (e.g., AWS, agents)
-  ├── tools/            # Tool registry and sandbox executions
-  └── web/              # User Interface / Dashboard
-scripts/                # Clean setup, verification and maintaince logic
+  ├── memoryblock/      # CLI orchestrator and `mblk` command wrapper
+  ├── core/             # Engine runtime, Memory Manger, Monitor loop
+  ├── types/            # Shared TypeScript definitions and Zod schemas
+  ├── daemon/           # Background process spawner and lifecycle host
+  ├── adapters/         # LLM models (OpenAI, Gemini, Anthropic, Bedrock)
+  ├── channels/         # Communication channels (Telegram, CLI, Web)
+  ├── plugins/          # Extension plugins (installer, agents, web-search)
+  ├── tools/            # Core sandbox schemas and OS tool execution
+  ├── api/              # HTTP API routing server
+  ├── locale/           # Translation and formatting core
+  └── web/              # User Interface static files / Dashboard
+scripts/                # Clean setup, verification and maintenance logic
 ```
 
 ## 🚀 Submitting a Pull Request
