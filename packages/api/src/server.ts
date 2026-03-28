@@ -342,18 +342,63 @@ export class ApiServer {
             return this.json({ current: API_VERSION, latest: API_VERSION, updateAvailable: false });
         }
 
-        // POST /api/update — trigger self-update (npm install -g memoryblock)
+        // POST /api/update — full system update: install, graceful stop, restart
         if (req.method === 'POST' && path === '/api/update') {
             try {
-                const { execSync } = await import('node:child_process');
+                const { execSync, spawn } = await import('node:child_process');
+
+                // 1. Install the new version globally (files on disk updated)
                 const output = execSync('npm install -g memoryblock 2>&1', {
                     timeout: 120_000,
                     encoding: 'utf-8',
                 });
-                // Schedule a graceful restart after response is sent
+
+                // 2. Resolve the mblk binary for the restart script
+                let mblkBin = 'mblk';
+                try {
+                    const which = process.platform === 'win32' ? 'where mblk' : 'which mblk';
+                    mblkBin = execSync(which, { encoding: 'utf-8', timeout: 5000 }).trim().split('\n')[0];
+                } catch { /* fallback to bare 'mblk' on PATH */ }
+
+                // 3. Schedule full-system restart after the HTTP response is sent
+                //    The detached child process outlives this server process.
+                //    Sequence:
+                //      a) Wait 2s for the response to flush
+                //      b) `mblk shutdown` — gracefully stops all blocks (SIGTERM → they save
+                //         memory.md, session.json, cost data) then stops the server
+                //      c) Wait 3s for all processes to exit cleanly
+                //      d) `mblk restart` — starts server + all previously-active blocks with NEW code
                 setTimeout(() => {
-                    process.exit(0); // systemd/launchd will restart us
+                    try {
+                        const isWin = process.platform === 'win32';
+                        const shell = isWin ? process.env.COMSPEC || 'cmd.exe' : '/bin/sh';
+
+                        const unixScript = [
+                            `sleep 2`,
+                            `"${mblkBin}" shutdown 2>/dev/null || true`,
+                            `sleep 3`,
+                            `"${mblkBin}" restart 2>/dev/null || true`,
+                        ].join(' && ');
+
+                        const winScript = [
+                            `timeout /t 2 >nul`,
+                            `"${mblkBin}" shutdown 2>nul`,
+                            `timeout /t 3 >nul`,
+                            `"${mblkBin}" restart 2>nul`,
+                        ].join(' & ');
+
+                        const child = spawn(shell, [isWin ? '/c' : '-c', isWin ? winScript : unixScript], {
+                            detached: true,
+                            stdio: 'ignore',
+                            env: { ...process.env },
+                        });
+                        child.unref();
+                    } catch {
+                        // Last resort: bare exit — service manager picks it up
+                    }
+                    process.exit(0);
                 }, 2000);
+
                 return this.json({ success: true, output: output.trim() });
             } catch (err) {
                 return this.json({
