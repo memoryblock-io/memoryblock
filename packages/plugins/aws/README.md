@@ -12,18 +12,18 @@ This package handles:
 **memoryblock** is a highly modular system. Here are the official packages:
 
 **The Core**
-*   [**memoryblock**](https://www.npmjs.com/package/memoryblock) - The core engine interface and types.
-*   [**@memoryblock/daemon**](https://www.npmjs.com/package/@memoryblock/daemon) - Background daemon manager.
-*   [**@memoryblock/api**](https://www.npmjs.com/package/@memoryblock/api) - Core REST and WebSocket API server.
-*   [**@memoryblock/cli**](https://www.npmjs.com/package/@memoryblock/cli) - Command-line interface.
-*   [**@memoryblock/types**](https://www.npmjs.com/package/@memoryblock/types) - Core TypeScript definitions and schemas.
+*   [**memoryblock**](https://www.npmjs.com/package/memoryblock) - CLI orchestrator and command routing.
+*   [**@memoryblock/core**](https://www.npmjs.com/package/@memoryblock/core) - Engine runtime, memory manager, gatekeeper.
+*   [**@memoryblock/types**](https://www.npmjs.com/package/@memoryblock/types) - Shared TypeScript definitions and schemas.
+*   [**@memoryblock/locale**](https://www.npmjs.com/package/@memoryblock/locale) - Localization strings and utilities.
 
 **Integrations & Tooling**
-*   [**@memoryblock/adapters**](https://www.npmjs.com/package/@memoryblock/adapters) - LLM adapters (OpenAI, Anthropic, Bedrock, etc).
+*   [**@memoryblock/adapters**](https://www.npmjs.com/package/@memoryblock/adapters) - LLM provider adapters (OpenAI, Anthropic, Bedrock, etc).
 *   [**@memoryblock/channels**](https://www.npmjs.com/package/@memoryblock/channels) - Communication channels (CLI, Telegram, Web).
-*   [**@memoryblock/tools**](https://www.npmjs.com/package/@memoryblock/tools) - Standard tool definitions and schemas.
-*   [**@memoryblock/locale**](https://www.npmjs.com/package/@memoryblock/locale) - Localization strings and formatting.
-*   [**@memoryblock/web**](https://www.npmjs.com/package/@memoryblock/web) - Front-end dashboard and Web UI.
+*   [**@memoryblock/tools**](https://www.npmjs.com/package/@memoryblock/tools) - Tool registry and built-in definitions.
+*   [**@memoryblock/daemon**](https://www.npmjs.com/package/@memoryblock/daemon) - Background process spawner and manager.
+*   [**@memoryblock/api**](https://www.npmjs.com/package/@memoryblock/api) - HTTP/WebSocket API server.
+*   [**@memoryblock/web**](https://www.npmjs.com/package/@memoryblock/web) - Front-end dashboard static files.
 
 **Plugins**
 *   [**@memoryblock/plugin-installer**](https://www.npmjs.com/package/@memoryblock/plugin-installer) - Plugin installer and registry manager.
