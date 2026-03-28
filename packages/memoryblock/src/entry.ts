@@ -7,6 +7,10 @@
  * Loaded by bin/mblk.js after runtime detection.
  */
 
+// Silence ALL Node.js native warnings (DeprecationWarning, ExperimentalWarning, etc.)
+// These are irrelevant to end-users and completely break the TUI/console animations.
+process.removeAllListeners('warning');
+
 import { Command } from 'commander';
 import { log } from '@memoryblock/core';
 import { getVersion, DEFAULT_PORT } from './constants.js';

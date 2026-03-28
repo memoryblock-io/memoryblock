@@ -446,25 +446,36 @@ export class Monitor {
     private trimHistory(): void {
         // Max chars for different tool types in history
         const TRIM_LIMITS: Record<string, { limit: number; hint: string }> = {
-            list_tools_available: { limit: 50, hint: '' },
             read_file: { limit: 500, hint: 'call read_file again if you need the full content' },
             search_files: { limit: 500, hint: 'call search_files again to see more results' },
             execute_command: { limit: 1000, hint: 're-run the command if you need the full output' },
         };
 
-        for (const msg of this.messages) {
+        let seenListTools = false;
+
+        // Iterate backwards to keep the MOST RECENT tool results intact if needed
+        for (let i = this.messages.length - 1; i >= 0; i--) {
+            const msg = this.messages[i];
             if (msg.role !== 'tool' || !msg.toolResults) continue;
 
             for (const result of msg.toolResults) {
-                // Special case: list_tools_available → ultra compact
+                // Special case: list_tools_available → ultra compact (only trim old ones)
                 if (result.name === 'list_tools_available') {
-                    const toolCount = (result.content.match(/^- /gm) || []).length;
-                    result.content = `(${toolCount} tools discovered)`;
+                    if (!seenListTools) {
+                        seenListTools = true;
+                        continue; // Keep the first (most recent) discovery intact for the LLM!
+                    }
+                    // Prevent double-trimming which corrupts the count to 0
+                    if (!result.content.startsWith('(')) {
+                        const toolCount = (result.content.match(/^- /gm) || []).length;
+                        result.content = `(${toolCount} tools previously discovered)`;
+                    }
                     continue;
                 }
 
                 const config = TRIM_LIMITS[result.name];
-                if (config && result.content.length > config.limit) {
+                // Only trim if it hasn't been trimmed already
+                if (config && result.content.length > config.limit && !result.content.includes('(trimmed for efficiency')) {
                     result.content = result.content.slice(0, config.limit) +
                         `\n...(trimmed for efficiency — ${config.hint})`;
                 }

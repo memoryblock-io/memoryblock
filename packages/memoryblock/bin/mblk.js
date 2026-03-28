@@ -14,6 +14,10 @@
  * We NEVER auto-install Bun. We only suggest it once, politely.
  */
 
+// Silence ALL Node.js native warnings (DeprecationWarning, ExperimentalWarning, etc.)
+// These are irrelevant to end-users and completely break the TUI/console animations.
+process.removeAllListeners('warning');
+
 import { execSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
