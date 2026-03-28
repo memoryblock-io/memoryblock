@@ -1,6 +1,5 @@
 import { promises as fsp } from 'node:fs';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
 import type { ToolExecutionResult } from '@memoryblock/types';
 import type { Tool } from '../base.js';
 import { createSchema } from '../base.js';

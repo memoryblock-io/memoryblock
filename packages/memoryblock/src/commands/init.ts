@@ -11,8 +11,6 @@ import { PROVIDERS, CHANNELS, PLUGINS, PROVIDER_AUTH, CHANNEL_AUTH } from '../co
 
 // Brand palette — matches web UI CSS vars
 const ACCENT = chalk.hex('#7C3AED');  // Primary accent (violet-600)
-const ACCENT2 = chalk.hex('#AF52DE'); // Secondary accent (purple, dark mode)
-const GLOW = chalk.hex('#b344ff');    // AI glow purple
 const DIM = chalk.dim;
 
 /**
