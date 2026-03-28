@@ -1,6 +1,6 @@
 {
   "name": "memoryblock-monorepo",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "description": "Deploy isolated, multi-agent AI assistants on your local machine with extreme resource efficiency.",
   "scripts": {
@@ -14,17 +14,17 @@
     "dev:prep": "pnpm dev:clean && pnpm dev:verify",
     "dev:clean": "rm -rf node_modules packages/*/node_modules packages/plugins/*/node_modules packages/*/dist packages/plugins/*/dist _playground/node_modules *.tsbuildinfo packages/*/*.tsbuildinfo packages/plugins/*/*.tsbuildinfo >/dev/null 2>&1;",
     "dev:bump": "$HOME/.bun/bin/bun scripts/bump.js",
-    "mblk": "$HOME/.bun/bin/bun packages/cli/src/bin/mblk.ts",
-    "mblk:start": "$HOME/.bun/bin/bun packages/cli/src/bin/mblk.ts start",
-    "mblk:stop": "$HOME/.bun/bin/bun packages/cli/src/bin/mblk.ts stop",
-    "mblk:status": "$HOME/.bun/bin/bun packages/cli/src/bin/mblk.ts status",
-    "mblk:create": "$HOME/.bun/bin/bun packages/cli/src/bin/mblk.ts create",
-    "mblk:reset": "$HOME/.bun/bin/bun packages/cli/src/bin/mblk.ts reset",
-    "mblk:shutdown": "$HOME/.bun/bin/bun packages/cli/src/bin/mblk.ts shutdown",
-    "mblk:restart": "$HOME/.bun/bin/bun packages/cli/src/bin/mblk.ts restart",
-    "mblk:token": "$HOME/.bun/bin/bun packages/cli/src/bin/mblk.ts server token",
-    "mblk:add": "$HOME/.bun/bin/bun packages/cli/src/bin/mblk.ts add",
-    "mblk:remove": "$HOME/.bun/bin/bun packages/cli/src/bin/mblk.ts remove"
+    "mblk": "$HOME/.bun/bin/bun packages/memoryblock/src/entry.ts",
+    "mblk:start": "$HOME/.bun/bin/bun packages/memoryblock/src/entry.ts start",
+    "mblk:stop": "$HOME/.bun/bin/bun packages/memoryblock/src/entry.ts stop",
+    "mblk:status": "$HOME/.bun/bin/bun packages/memoryblock/src/entry.ts status",
+    "mblk:create": "$HOME/.bun/bin/bun packages/memoryblock/src/entry.ts create",
+    "mblk:reset": "$HOME/.bun/bin/bun packages/memoryblock/src/entry.ts reset",
+    "mblk:shutdown": "$HOME/.bun/bin/bun packages/memoryblock/src/entry.ts shutdown",
+    "mblk:restart": "$HOME/.bun/bin/bun packages/memoryblock/src/entry.ts restart",
+    "mblk:token": "$HOME/.bun/bin/bun packages/memoryblock/src/entry.ts server token",
+    "mblk:add": "$HOME/.bun/bin/bun packages/memoryblock/src/entry.ts add",
+    "mblk:remove": "$HOME/.bun/bin/bun packages/memoryblock/src/entry.ts remove"
   },
   "devDependencies": {
     "@eslint/js": "^9.27.0",
