@@ -20,6 +20,13 @@ export function renderSettings(container) {
             <div class="settings-content">
                 <!-- General Settings -->
                 <div class="settings-content-section active" id="setting-general">
+                    <div class="update-banner" id="update-banner" style="display:none">
+                        <div class="update-banner-text">
+                            <strong>New version available</strong>
+                            <span class="update-banner-versions" id="update-versions"></span>
+                        </div>
+                        <button class="btn-small update-now-btn" id="update-now-btn">Update Now</button>
+                    </div>
                     <div class="settings-panel">
                         <h3>Workspace</h3>
                         <p class="desc">Manage your core memoryblock environment and data.</p>
@@ -129,6 +136,39 @@ export function renderSettings(container) {
     
     // Load general settings
     loadGeneralSettings();
+
+    // Show update banner if available
+    const updateData = window.__mblkUpdate;
+    if (updateData && updateData.updateAvailable) {
+        const banner = document.getElementById('update-banner');
+        const versions = document.getElementById('update-versions');
+        if (banner && versions) {
+            versions.textContent = `${updateData.current} → ${updateData.latest}`;
+            banner.style.display = 'flex';
+
+            document.getElementById('update-now-btn')?.addEventListener('click', async (e) => {
+                const btn = e.target;
+                btn.textContent = 'Updating...';
+                btn.disabled = true;
+                try {
+                    const res = await api('/api/update', { method: 'POST' });
+                    if (res.success) {
+                        btn.textContent = '✓ Updated! Restarting...';
+                        banner.querySelector('strong').textContent = 'Update complete';
+                        versions.textContent = 'Server restarting — please refresh in a few seconds.';
+                        setTimeout(() => location.reload(), 5000);
+                    } else {
+                        btn.textContent = '✗ Failed';
+                        versions.textContent = res.error || 'Unknown error';
+                        setTimeout(() => { btn.textContent = 'Retry'; btn.disabled = false; }, 3000);
+                    }
+                } catch (err) {
+                    btn.textContent = '✗ Failed';
+                    setTimeout(() => { btn.textContent = 'Retry'; btn.disabled = false; }, 3000);
+                }
+            });
+        }
+    }
 }
 
 async function loadGeneralSettings() {

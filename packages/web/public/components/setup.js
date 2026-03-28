@@ -62,7 +62,7 @@ export function renderSetup(container, { api, onComplete }) {
         switch (step) {
             case 'welcome': return `
                 <div class="setup-welcome">
-                    <div class="setup-logo">⬡</div>
+                    <div class="setup-logo"><svg width="48" height="52" viewBox="0 0 24 26" fill="none"><defs><linearGradient id="hexGradSetup" x1="0" y1="0" x2="24" y2="26"><stop offset="0%" class="hex-stop1" style="stop-color:#7C3AED"><animate attributeName="stop-color" values="#7C3AED;#AF52DE;#b344ff;#ff4a5a;#7C3AED" dur="4s" repeatCount="indefinite"/></stop><stop offset="50%" class="hex-stop2" style="stop-color:#AF52DE"><animate attributeName="stop-color" values="#AF52DE;#b344ff;#ff4a5a;#7C3AED;#AF52DE" dur="4s" repeatCount="indefinite"/></stop><stop offset="100%" class="hex-stop3" style="stop-color:#b344ff"><animate attributeName="stop-color" values="#b344ff;#ff4a5a;#7C3AED;#AF52DE;#b344ff" dur="4s" repeatCount="indefinite"/></stop></linearGradient></defs><path d="M12 1L22 7v12l-10 6L2 19V7l10-6z" stroke="url(#hexGradSetup)" stroke-width="2" fill="none"/></svg></div>
                     <h1>memoryblock</h1>
                     <p class="setup-subtitle">Deploy isolated AI workspaces on your machine.</p>
                     <p class="setup-hint">Let's set things up. You can skip any step.</p>
@@ -154,7 +154,7 @@ export function renderSetup(container, { api, onComplete }) {
 
             case 'finish': return `
                 <div class="setup-welcome">
-                    <div class="setup-logo done">✓</div>
+                    <div class="setup-logo done"><svg width="48" height="52" viewBox="0 0 24 26" fill="none"><defs><linearGradient id="hexGradDone" x1="0" y1="0" x2="24" y2="26"><stop offset="0%" style="stop-color:var(--success)"/><stop offset="100%" style="stop-color:#34c759"/></linearGradient></defs><path d="M12 1L22 7v12l-10 6L2 19V7l10-6z" stroke="url(#hexGradDone)" stroke-width="2" fill="none"/><path d="M8 13l3 3 5-6" stroke="url(#hexGradDone)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
                     <h1>You're all set</h1>
                     <div class="setup-summary" id="setup-results"></div>
                     <div class="setup-actions">

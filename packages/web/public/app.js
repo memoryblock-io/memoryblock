@@ -73,14 +73,17 @@ function mainLayout() {
         <div class="view active" id="main-view">
             <header>
                 <div class="header-left">
-                    <div class="brand-small">⬡ memoryblock</div>
+                    <div class="brand-small"><span class="brand-logo"><svg width="16" height="18" viewBox="0 0 24 26" fill="none"><defs><linearGradient id="hexGradNav" x1="0" y1="0" x2="24" y2="26"><stop offset="0%" style="stop-color:#7C3AED"><animate attributeName="stop-color" values="#7C3AED;#AF52DE;#b344ff;#ff4a5a;#7C3AED" dur="4s" repeatCount="indefinite"/></stop><stop offset="50%" style="stop-color:#AF52DE"><animate attributeName="stop-color" values="#AF52DE;#b344ff;#ff4a5a;#7C3AED;#AF52DE" dur="4s" repeatCount="indefinite"/></stop><stop offset="100%" style="stop-color:#b344ff"><animate attributeName="stop-color" values="#b344ff;#ff4a5a;#7C3AED;#AF52DE;#b344ff" dur="4s" repeatCount="indefinite"/></stop></linearGradient></defs><path d="M12 1L22 7v12l-10 6L2 19V7l10-6z" stroke="url(#hexGradNav)" stroke-width="2" fill="none"/></svg></span> memoryblock</div>
                     <nav>
                         <button class="nav-btn active" data-tab="blocks">blocks</button>
                         <button class="nav-btn" data-tab="archive">archive</button>
                         <button class="nav-btn" data-tab="settings">settings</button>
                     </nav>
                 </div>
-                <button class="theme-toggle" id="quick-theme">${getTheme() === 'dark' ? '☀' : '◑'}</button>
+                <div class="header-right">
+                    <span class="update-badge" id="update-badge" style="display:none"></span>
+                    <button class="theme-toggle" id="quick-theme">${getTheme() === 'dark' ? '☀' : '◑'}</button>
+                </div>
             </header>
             <main id="main-content"></main>
         </div>
@@ -132,6 +135,28 @@ async function showMain() {
         setTheme(next);
         document.getElementById('quick-theme').textContent = next === 'dark' ? '☀' : '◑';
     });
+
+    // Non-blocking version check
+    fetch(`${API_BASE}/api/version`, {
+        headers: { 'Authorization': `Bearer ${getToken()}` },
+    }).then(r => r.json()).then(data => {
+        if (data.updateAvailable) {
+            const badge = document.getElementById('update-badge');
+            if (badge) {
+                badge.textContent = `v${data.latest} available`;
+                badge.style.display = 'inline-flex';
+                badge.title = `Update: ${data.current} → ${data.latest}`;
+                // Store for settings to use
+                window.__mblkUpdate = data;
+                badge.addEventListener('click', () => {
+                    currentTab = 'settings';
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelector('[data-tab="settings"]')?.classList.add('active');
+                    renderTab(content, 'settings');
+                });
+            }
+        }
+    }).catch(() => {});
 
     renderTab(content, currentTab);
 }

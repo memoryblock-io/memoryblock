@@ -125,12 +125,53 @@ body::before {
     color: var(--accent);
     margin-bottom: 24px;
     letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .brand-small {
     font-size: 0.9rem;
     font-weight: 500;
     color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.brand-logo {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.brand-logo svg {
+    display: block;
+}
+
+/* Animated gradient flowing through the hexagon logo */
+@keyframes gradientShift {
+    0%   { stop-color: #7C3AED; }
+    25%  { stop-color: #AF52DE; }
+    50%  { stop-color: #b344ff; }
+    75%  { stop-color: #ff4a5a; }
+    100% { stop-color: #7C3AED; }
+}
+
+@keyframes gradientShift2 {
+    0%   { stop-color: #AF52DE; }
+    25%  { stop-color: #b344ff; }
+    50%  { stop-color: #ff4a5a; }
+    75%  { stop-color: #7C3AED; }
+    100% { stop-color: #AF52DE; }
+}
+
+@keyframes gradientShift3 {
+    0%   { stop-color: #b344ff; }
+    25%  { stop-color: #ff4a5a; }
+    50%  { stop-color: #7C3AED; }
+    75%  { stop-color: #AF52DE; }
+    100% { stop-color: #b344ff; }
 }
 
 .auth-hint {
@@ -228,6 +269,78 @@ nav { display: flex; gap: 4px; }
 }
 
 .theme-toggle:hover { border-color: var(--accent); }
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.update-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: #fff;
+    background: linear-gradient(135deg, #7C3AED, #AF52DE);
+    border-radius: 12px;
+    cursor: pointer;
+    animation: badgePulse 3s infinite ease-in-out;
+    transition: transform 0.2s, box-shadow 0.2s;
+    white-space: nowrap;
+}
+
+.update-badge:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 12px rgba(124, 58, 237, 0.4);
+}
+
+@keyframes badgePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+.update-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(175,82,222,0.08));
+    border: 1px solid rgba(124,58,237,0.2);
+    border-radius: 12px;
+    animation: cardIn 0.3s ease;
+}
+
+.update-banner-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.update-banner-text strong {
+    font-size: 0.85rem;
+    color: var(--text);
+}
+
+.update-banner-versions {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.update-now-btn {
+    background: var(--accent) !important;
+    color: #fff !important;
+    border-color: var(--accent) !important;
+    font-weight: 500;
+    padding: 6px 16px !important;
+}
+
+.update-now-btn:hover {
+    opacity: 0.9;
+}
 
 /* ===== Block Cards ===== */
 
@@ -807,8 +920,8 @@ select.form-input {
     border-radius: 16px;
     padding: 40px 36px;
     box-shadow:
-        0 0 60px rgba(128, 90, 213, 0.08),
-        0 0 120px rgba(128, 90, 213, 0.04);
+        0 0 60px rgba(124, 58, 237, 0.08),
+        0 0 120px rgba(124, 58, 237, 0.04);
     animation: cardIn 0.3s ease;
 }
 @keyframes cardIn {
@@ -825,10 +938,15 @@ select.form-input {
 .setup-welcome { text-align: center; }
 .setup-logo {
     font-size: 48px; margin: 0 0 16px;
-    color: var(--accent);
-    text-shadow: 0 0 40px rgba(128, 90, 213, 0.3);
+    display: flex;
+    justify-content: center;
 }
-.setup-logo.done { color: var(--success); text-shadow: none; }
+.setup-logo.done svg .hex-stop1,
+.setup-logo.done svg .hex-stop2,
+.setup-logo.done svg .hex-stop3 {
+    animation: none !important;
+    stop-color: var(--success) !important;
+}
 
 /* Option cards */
 .setup-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
