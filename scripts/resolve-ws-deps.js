@@ -44,7 +44,7 @@ function rewriteDeps(dir) {
       const pkgPath = path.join(full, "package.json");
       const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
 
-      ["dependencies", "devDependencies", "peerDependencies"].forEach(field => {
+      ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"].forEach(field => {
         if (!pkg[field]) return;
 
         for (const dep in pkg[field]) {

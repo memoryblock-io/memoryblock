@@ -26,7 +26,7 @@ const path = require('path');
 const os = require('os');
 
 const CWD = process.cwd();
-const CLI_BIN = path.join(CWD, 'packages/cli/dist/bin/mblk.js');
+const CLI_BIN = path.join(CWD, 'packages/memoryblock/dist/entry.js');
 
 console.log('🛡️  Running Universal Failsafe...');
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mblk-failsafe-'));
