@@ -48,16 +48,19 @@ importers:
       '@memoryblock/plugin-installer':
         specifier: workspace:*
         version: link:../plugins/installer
-      memoryblock:
+    devDependencies:
+      '@memoryblock/core':
         specifier: workspace:*
         version: link:../core
-    devDependencies:
       '@types/bun':
         specifier: ^1.3.11
         version: 1.3.11
 
   packages/channels:
     dependencies:
+      '@memoryblock/core':
+        specifier: workspace:*
+        version: link:../core
       '@memoryblock/types':
         specifier: workspace:*
         version: link:../types
@@ -67,62 +70,6 @@ importers:
       grammy:
         specifier: ^1.35.0
         version: 1.41.1
-      memoryblock:
-        specifier: workspace:*
-        version: link:../core
-
-  packages/cli:
-    dependencies:
-      '@clack/prompts':
-        specifier: ^1.1.0
-        version: 1.1.0
-      '@memoryblock/adapters':
-        specifier: workspace:*
-        version: link:../adapters
-      '@memoryblock/api':
-        specifier: workspace:*
-        version: link:../api
-      '@memoryblock/channels':
-        specifier: workspace:*
-        version: link:../channels
-      '@memoryblock/daemon':
-        specifier: workspace:*
-        version: link:../daemon
-      '@memoryblock/locale':
-        specifier: workspace:*
-        version: link:../locale
-      '@memoryblock/plugin-agents':
-        specifier: workspace:*
-        version: link:../plugins/agents
-      '@memoryblock/plugin-installer':
-        specifier: workspace:*
-        version: link:../plugins/installer
-      '@memoryblock/tools':
-        specifier: workspace:*
-        version: link:../tools
-      '@memoryblock/types':
-        specifier: workspace:*
-        version: link:../types
-      '@memoryblock/web':
-        specifier: workspace:*
-        version: link:../web
-      chalk:
-        specifier: ^5.4.0
-        version: 5.6.2
-      commander:
-        specifier: ^13.0.0
-        version: 13.1.0
-      memoryblock:
-        specifier: workspace:*
-        version: link:../core
-    devDependencies:
-      '@types/bun':
-        specifier: ^1.3.11
-        version: 1.3.11
-    optionalDependencies:
-      '@memoryblock/plugin-web-search':
-        specifier: workspace:*
-        version: link:../plugins/web-search
 
   packages/core:
     dependencies:
@@ -135,6 +82,10 @@ importers:
       chalk:
         specifier: ^5.4.0
         version: 5.6.2
+    devDependencies:
+      '@types/bun':
+        specifier: ^1.3.11
+        version: 1.3.11
 
   packages/daemon:
     dependencies:
@@ -144,35 +95,91 @@ importers:
 
   packages/locale: {}
 
+  packages/memoryblock:
+    dependencies:
+      '@clack/prompts':
+        specifier: ^1.1.0
+        version: 1.1.0
+      '@memoryblock/core':
+        specifier: workspace:*
+        version: link:../core
+      '@memoryblock/locale':
+        specifier: workspace:*
+        version: link:../locale
+      '@memoryblock/types':
+        specifier: workspace:*
+        version: link:../types
+      chalk:
+        specifier: ^5.4.0
+        version: 5.6.2
+      commander:
+        specifier: ^13.0.0
+        version: 13.1.0
+    devDependencies:
+      '@types/bun':
+        specifier: ^1.3.11
+        version: 1.3.11
+    optionalDependencies:
+      '@memoryblock/adapters':
+        specifier: workspace:*
+        version: link:../adapters
+      '@memoryblock/api':
+        specifier: workspace:*
+        version: link:../api
+      '@memoryblock/channels':
+        specifier: workspace:*
+        version: link:../channels
+      '@memoryblock/daemon':
+        specifier: workspace:*
+        version: link:../daemon
+      '@memoryblock/plugin-agents':
+        specifier: workspace:*
+        version: link:../plugins/agents
+      '@memoryblock/plugin-fetch-webpage':
+        specifier: workspace:*
+        version: link:../plugins/fetch-webpage
+      '@memoryblock/plugin-installer':
+        specifier: workspace:*
+        version: link:../plugins/installer
+      '@memoryblock/plugin-web-search':
+        specifier: workspace:*
+        version: link:../plugins/web-search
+      '@memoryblock/tools':
+        specifier: workspace:*
+        version: link:../tools
+      '@memoryblock/web':
+        specifier: workspace:*
+        version: link:../web
+
   packages/plugins/agents:
     dependencies:
       '@memoryblock/adapters':
         specifier: workspace:*
         version: link:../../adapters
+      '@memoryblock/core':
+        specifier: workspace:*
+        version: link:../../core
       '@memoryblock/tools':
         specifier: workspace:*
         version: link:../../tools
       '@memoryblock/types':
         specifier: workspace:*
         version: link:../../types
-      memoryblock:
-        specifier: workspace:*
-        version: link:../../core
 
   packages/plugins/aws:
     dependencies:
       '@aws-sdk/client-bedrock-runtime':
         specifier: ^3.1015.0
         version: 3.1015.0
+      '@memoryblock/core':
+        specifier: workspace:*
+        version: link:../../core
       '@memoryblock/types':
         specifier: workspace:*
         version: link:../../types
       '@smithy/node-http-handler':
         specifier: ^4.0.0
         version: 4.4.14
-      memoryblock:
-        specifier: workspace:*
-        version: link:../../core
 
   packages/plugins/fetch-webpage:
     dependencies:
@@ -188,21 +195,21 @@ importers:
 
   packages/plugins/web-search:
     dependencies:
+      '@memoryblock/core':
+        specifier: workspace:*
+        version: link:../../core
       '@memoryblock/types':
         specifier: workspace:*
         version: link:../../types
-      memoryblock:
-        specifier: workspace:*
-        version: link:../../core
 
   packages/tools:
     dependencies:
+      '@memoryblock/core':
+        specifier: workspace:*
+        version: link:../core
       '@memoryblock/types':
         specifier: workspace:*
         version: link:../types
-      memoryblock:
-        specifier: workspace:*
-        version: link:../core
 
   packages/types:
     dependencies:
