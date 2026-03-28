@@ -125,6 +125,7 @@ mblk superblock ops-monitor --off  # back to sandboxed
 | `mblk status` | See all blocks and their state |
 | `mblk config [target]` | Edit config: `auth`, `<block>`, or global |
 | `mblk superblock <block>` | Grant/revoke full system access |
+| `mblk update` | Full system update and restart |
 | `mblk web` | Open the web dashboard |
 | `mblk add / remove <plugin>` | Manage plugins |
 | `mblk delete <block>` | Archive (or `--hard` delete) a block |
