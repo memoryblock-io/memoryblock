@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/plugin-agents",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "description": "Official plugin for orchestrating secondary AI agents in memoryblock.",
   "files": [
@@ -15,7 +15,8 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@memoryblock/tools": "workspace:*",
@@ -23,7 +24,7 @@
     "@memoryblock/types": "workspace:*"
   },
   "peerDependencies": {
-    "memoryblock": "workspace:*"
+    "@memoryblock/core": "workspace:*"
   },
   "keywords": [
     "memoryblock",

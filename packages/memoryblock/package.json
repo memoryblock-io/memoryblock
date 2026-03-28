@@ -1,0 +1,92 @@
+{
+  "name": "memoryblock",
+  "version": "0.1.5",
+  "type": "module",
+  "description": "Deploy isolated, multi-agent AI assistants on your local machine with extreme resource efficiency.",
+  "main": "./dist/entry.js",
+  "types": "./dist/entry.d.ts",
+  "files": [
+    "dist/",
+    "bin/"
+  ],
+  "bin": {
+    "mblk": "./bin/mblk.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/entry.d.ts",
+      "import": "./dist/entry.js"
+    },
+    "./commands": {
+      "types": "./dist/commands.d.ts",
+      "import": "./dist/commands.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@memoryblock/core": "workspace:*",
+    "@memoryblock/types": "workspace:*",
+    "@memoryblock/locale": "workspace:*",
+    "@clack/prompts": "^1.1.0",
+    "chalk": "^5.4.0",
+    "commander": "^13.0.0"
+  },
+  "optionalDependencies": {
+    "@memoryblock/adapters": "workspace:*",
+    "@memoryblock/api": "workspace:*",
+    "@memoryblock/channels": "workspace:*",
+    "@memoryblock/daemon": "workspace:*",
+    "@memoryblock/tools": "workspace:*",
+    "@memoryblock/web": "workspace:*",
+    "@memoryblock/plugin-agents": "workspace:*",
+    "@memoryblock/plugin-installer": "workspace:*",
+    "@memoryblock/plugin-web-search": "workspace:*",
+    "@memoryblock/plugin-fetch-webpage": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.11"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "memoryblock",
+    "mblk",
+    "ai-agent",
+    "assistants",
+    "agents",
+    "automation",
+    "multi-agent",
+    "agentic-framework",
+    "core",
+    "cli",
+    "framework",
+    "interface",
+    "channels",
+    "adapters",
+    "tools",
+    "skills",
+    "local-ai",
+    "local-llm",
+    "openai",
+    "anthropic",
+    "gemini",
+    "groq",
+    "chatgpt",
+    "deepseek",
+    "ollama"
+  ],
+  "author": {
+    "name": "Ghazi",
+    "url": "https://mgks.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memoryblock-io/memoryblock.git"
+  },
+  "funding": "https://github.com/sponsors/mgks",
+  "license": "MIT"
+}

@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/daemon",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "description": "Background daemon manager for memoryblock.",
   "files": [
@@ -15,7 +15,8 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@memoryblock/types": "workspace:*"

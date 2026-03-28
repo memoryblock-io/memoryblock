@@ -1,8 +1,10 @@
 {
   "name": "@memoryblock/adapters",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "description": "LLM adapters interface for memoryblock.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist/"
   ],
@@ -13,12 +15,13 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@memoryblock/types": "workspace:*",
     "@aws-sdk/client-bedrock-runtime": "^3.1015.0",
-    "@smithy/node-http-handler": "^3.0.0",
-    "@memoryblock/types": "workspace:*"
+    "@smithy/node-http-handler": "^3.0.0"
   },
   "keywords": [
     "memoryblock",

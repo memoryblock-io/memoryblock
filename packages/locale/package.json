@@ -1,15 +1,16 @@
 {
   "name": "@memoryblock/locale",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "description": "Localization strings and formatting utilities for memoryblock.",
   "files": [
     "dist/"
   ],
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "tsc -p tsconfig.json"
   },
   "exports": {
     ".": {

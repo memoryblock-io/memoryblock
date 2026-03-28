@@ -1,8 +1,10 @@
 {
   "name": "@memoryblock/plugin-web-search",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "description": "Official plugin providing web search capabilities to memoryblock.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist/"
   ],
@@ -13,13 +15,14 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@memoryblock/types": "workspace:*"
   },
   "peerDependencies": {
-    "memoryblock": "workspace:*"
+    "@memoryblock/core": "workspace:*"
   },
   "keywords": [
     "memoryblock",

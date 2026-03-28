@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/web",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Front-end dashboard and Web UI for memoryblock.",
   "files": [
     "public/"

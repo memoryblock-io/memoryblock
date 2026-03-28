@@ -1,8 +1,10 @@
 {
   "name": "@memoryblock/channels",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "description": "Communication channel integrations for memoryblock.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist/"
   ],
@@ -13,15 +15,16 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@memoryblock/types": "workspace:*",
     "chalk": "^5.4.0",
-    "grammy": "^1.35.0",
-    "@memoryblock/types": "workspace:*"
+    "grammy": "^1.35.0"
   },
   "peerDependencies": {
-    "memoryblock": "workspace:*"
+    "@memoryblock/core": "workspace:*"
   },
   "keywords": [
     "memoryblock",
