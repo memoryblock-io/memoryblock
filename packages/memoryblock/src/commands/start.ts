@@ -827,10 +827,15 @@ export async function startCommand(blockName?: string, options?: { channel?: str
         // Always background the daemon, then attach CLI natively
         log.brand(`${blockConfig.name}\n`);
         log.success(`Daemon spawned (PID ${pid}). Attaching CLI...\n`);
-        
+
+        // Display status banner without loading the full adapter/tools/channels stack
+        // (the daemon child handles all that — the parent only needs to show info and attach)
+        const model = blockConfig.adapter.model.split('.').pop()?.replace(/-v\d.*$/, '') || blockConfig.adapter.model;
+        log.dim(`  ${model} · ${channelType} · ${blockConfig.tools.sandbox ? 'sandboxed' : 'unrestricted'}`);
+        console.log('');
+
         // Let daemon init chat.json and WebChannel before tailing
         await new Promise(r => setTimeout(r, 1500));
-        await setupBlockRuntimeLogs(blockConfig, blockPath, auth, options, channelType);
         await attachCLIToRunningBlock(blockName, blockPath);
     } catch (err) {
         throw new Error(`Failed to spawn daemon: ${(err as Error).message}`);
