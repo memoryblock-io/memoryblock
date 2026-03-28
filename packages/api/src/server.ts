@@ -5,7 +5,7 @@ import type { Server, ServerWebSocket } from 'bun';
 import {
     loadGlobalConfig, resolveBlocksDir,
     loadBlockConfig, loadAuth, saveGlobalConfig,
-} from 'memoryblock';
+} from '@memoryblock/core';
 import { validateAuthToken } from './auth.js';
 
 export interface ApiServerConfig {
@@ -411,7 +411,7 @@ export class ApiServer {
     private async handleCreateBlock(req: Request): Promise<Response> {
         try {
             const body = await req.json() as { name: string; description?: string };
-            const CREATE_PKG = '../../core/src/cli/commands/create.js';
+            const CREATE_PKG = 'memoryblock/commands';
             const { createCommand } = await import(CREATE_PKG);
             await createCommand(body.name);
             return this.json({ success: true, name: body.name });
@@ -422,7 +422,7 @@ export class ApiServer {
 
     private async handleDeleteBlock(name: string): Promise<Response> {
         try {
-            const DELETE_PKG = '../../core/src/cli/commands/delete.js';
+            const DELETE_PKG = 'memoryblock/commands';
             const { deleteCommand } = await import(DELETE_PKG);
             await deleteCommand(name);
             return this.json({ success: true, message: 'Archived safely.' });
@@ -445,7 +445,7 @@ export class ApiServer {
                 );
             }
 
-            const START_PKG = '../../core/src/cli/commands/start.js';
+            const START_PKG = 'memoryblock/commands';
             const { startCommand } = await import(START_PKG);
             // Explicitly pass 'web' so WebChannel initializes and monitors chat.json
             await startCommand(blockName, { channel: 'web', daemon: true });
@@ -457,7 +457,7 @@ export class ApiServer {
 
     private async handleStopBlock(blockName: string): Promise<Response> {
         try {
-            const STOP_PKG = '../../core/src/cli/commands/stop.js';
+            const STOP_PKG = 'memoryblock/commands';
             const { stopCommand } = await import(STOP_PKG);
             await stopCommand(blockName);
             return this.json({ success: true, message: `${blockName} stopped.` });
@@ -469,7 +469,7 @@ export class ApiServer {
     private async handleResetBlock(blockName: string, url: URL): Promise<Response> {
         try {
             const hard = url.searchParams.get('hard') === 'true';
-            const RESET_PKG = '../../core/src/cli/commands/reset.js';
+            const RESET_PKG = 'memoryblock/commands';
             const { resetCommand } = await import(RESET_PKG);
             await resetCommand(blockName, { hard });
             return this.json({ success: true, message: `${blockName} reset${hard ? ' (hard)' : ''}.` });
@@ -546,7 +546,7 @@ export class ApiServer {
             if (!daemonRunning) {
                 // Auto-start daemon for this block
                 try {
-                    const START_PKG = '../../core/src/cli/commands/start.js';
+                    const START_PKG = 'memoryblock/commands';
                     const { startCommand } = await import(START_PKG);
                     await startCommand(blockName, { channel: 'web', daemon: true });
                     note = 'Message queued. Block daemon starting up — first response may take a moment.';
@@ -948,7 +948,7 @@ export class ApiServer {
 
     private async handleRestoreArchive(archiveName: string): Promise<Response> {
         try {
-            const RESTORE_PKG = '../../core/src/cli/commands/delete.js';
+            const RESTORE_PKG = 'memoryblock/commands';
             const { restoreCommand } = await import(RESTORE_PKG);
             await restoreCommand(archiveName);
             return this.json({ success: true, message: `Restored from ${archiveName}.` });
@@ -959,7 +959,7 @@ export class ApiServer {
 
     private async handleDeleteArchive(archiveName: string): Promise<Response> {
         try {
-            const DELETE_PKG = '../../core/src/cli/commands/delete.js';
+            const DELETE_PKG = 'memoryblock/commands';
             const { deleteCommand } = await import(DELETE_PKG);
             await deleteCommand(`_archive/${archiveName}`, { hard: true });
             return this.json({ success: true, message: 'Permanently deleted.' });
