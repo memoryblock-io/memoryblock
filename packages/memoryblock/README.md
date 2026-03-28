@@ -37,112 +37,171 @@
 
 </div>
 
-`memoryblock` is a lightweight framework for orchestrating isolated AI background workers. Instead of building monolithic chatbots, we provision local workspaces called **blocks**. Each block acts as a dedicated environment equipped with its own continuous memory, toolset, and execution loop.
+`memoryblock` is a lightweight framework for running isolated AI agents as local background workers. Instead of building monolithic chatbots, you provision dedicated workspaces called **blocks**, each with its own memory, tools, and execution loop.
 
-Spawn a devops block to watch your infrastructure, a research block to scrape web data, and your primary home block to coordinate tasks. No state pollution, no crossed context boundaries.
+Spin up a devops block to monitor your servers, a research block to scrape web data, and a home block to coordinate everything. They run independently - no shared state, no crossed wires.
 
-* **Absolute Isolation**: Every agent lives inside a dedicated filesystem directory (`config.json`, `memory.md`, `logs/`). To move an agent to a new server, you just copy its folder. No centralized databases to manage.
-* **Token Pruning**: Running background agents is historically expensive. `memoryblock` mitigates this by lazy-loading tool schemas only when invoked, and proactively truncating long tool outputs once analyzed. This typically halves the cost of sustained sessions.
-* **Native & Lean**: Zero dependency on heavy Node.js runtimes or Electron ecosystems. The core engine, HTTP server, and WebSocket router rely purely on [Bun's](https://bun.sh) native primitives for maximal I/O speed and minimal RAM overhead.
-* **Model Agnostic**: Provision blocks dynamically utilizing native definitions for OpenAI, Anthropic, AWS Bedrock, or Google Gemini.
+**Why memoryblock?**
 
-## Quick Start
+- **Persistent Memory** — Agents remember context across sessions. No repeated prompts.
+- **Cost-Efficient** — Token pruning and lazy tool loading typically halve inference costs.
+- **Portable** — Each block is a folder. Copy it to move an agent to a new machine.
+- **Model Agnostic** — Native support for OpenAI, Anthropic, AWS Bedrock, and Google Gemini.
+- **Cross-Platform** — Works everywhere - macOS, Linux, or Windows. Runs on Node.js ≥ 20 and Bun.
 
-`memoryblock` leverages Bun under the hood for native execution speed. If you use npm, we automatically manage the local Bun environment for you.
+## Get Started in 60 Seconds
 
-**Install the framework globally:**
 ```bash
-bun install -g memoryblock     # Option A: Fastest
-npm install -g memoryblock     # Option B: Managed internally
+npm install -g memoryblock   # or: bun install -g memoryblock
+mblk init                    # guided setup — pick your LLM provider
+mblk start home              # your first agent is now running
 ```
 
-**Initialize your environment:**
+That's it. You have a running AI agent with persistent memory, file access, and a web dashboard.
+
+> **Bun users:** `mblk` automatically uses Bun when available for ~2x faster startup. Runs perfectly on Node.js too.
+
+## Talk to Your Agent
+
+Blocks are decoupled from the UI. Use whatever interface fits:
+
 ```bash
-mblk init
+mblk start home                     # interactive CLI chat
+mblk start home --channel telegram  # route to Telegram
+mblk web                            # web dashboard at localhost:8420
 ```
-*This interactive wizard verifies your local environment and configures your initial LLM provider credentials.*
 
-**Start your default block:**
+The web dashboard gives you real-time streaming, cost tracking, memory inspection, and block management — all in one place.
+
+## What Can Your Agents Do?
+
+Every block ships with **22+ built-in tools** — no plugins required:
+
+| Category | Tools | Available to |
+|:---|:---|:---|
+| **Files** | `read_file` · `write_file` · `append_to_file` · `replace_in_file` · `copy_file` · `move_file` · `delete_file` · `create_directory` · `file_info` · `list_directory` · `search_files` · `find_files` | All blocks |
+| **Shell** | `execute_command` · `run_lint` · `run_build` · `run_test` | Superblocks |
+| **Identity** | `update_monitor_identity` · `update_founder_info` · `send_channel_message` | All blocks |
+| **System** | `system_info` · `get_current_time` · `list_blocks` | All / Superblocks |
+
+### Need more? Add plugins:
+
 ```bash
-mblk start [block-name]
+mblk add web-search     # SERP querying via Brave Search
+mblk add fetch-webpage  # Extract and chunk web page content
+mblk add agents         # Let blocks spawn ephemeral sub-agents
 ```
-*Your autonomous assistant is now running in the background.*
 
-## Working with Channels
+## Permissions
 
-Your blocks are decoupled from the UI. Communicate with them via the terminal, secure web dashboard, or standard chat clients. 
+Blocks are sandboxed by default. Each block only accesses its own directory.
 
-**Launch the Web Dashboard:**
+| | Block *(default)* | Superblock |
+|:---|:---:|:---:|
+| Read/write own files | ✅ | ✅ |
+| Identity & communication tools | ✅ | ✅ |
+| System info & time | ✅ | ✅ |
+| Shell commands | ❌ | ✅ |
+| Files outside block directory | ❌ | ✅ |
+| Cross-block visibility | ❌ | ✅ |
+
+Elevate a block when it needs more power:
+
 ```bash
-mblk web
+mblk superblock ops-monitor       # unrestricted access
+mblk superblock ops-monitor --off  # back to sandboxed
 ```
-*Access real-time stream logs, cost tracking, and memory management at `localhost:8420`.*
 
-**Route a block to social channels:**
-```bash
-mblk start home --channel telegram
-```
-*Securely interact with your existing agent state from anywhere without losing active history.*
+**Tool approval:** Dangerous commands pause and ask for your confirmation right in the chat. Safe commands (`ls`, `grep`, `git status`, `npm run build`, etc.) run automatically.
 
-## Command Reference
+## Commands
 
-| Command | Description |
+| Command | What it does |
 |:---|:---|
-| `mblk init` | Interactive setup - configure credentials and create your first block |
-| `mblk create <name>` | Create a new block (isolated AI workspace) |
-| `mblk start [block]` | Start a block's monitor loop (or all blocks) |
-| `mblk stop [block]` | Stop a running block monitor (or all blocks) |
-| `mblk status` | Show all blocks and their state |
-| `mblk delete <block>` | Archive a block safely (use `--hard` to permanently delete) |
+| `mblk init` | Guided setup wizard |
+| `mblk create <name>` | Create a new block |
+| `mblk start [block]` | Start a block (or all blocks) |
+| `mblk stop [block]` | Stop a block (or all blocks) |
+| `mblk status` | See all blocks and their state |
+| `mblk config [target]` | Edit config: `auth`, `<block>`, or global |
+| `mblk superblock <block>` | Grant/revoke full system access |
+| `mblk web` | Open the web dashboard |
+| `mblk add / remove <plugin>` | Manage plugins |
+| `mblk delete <block>` | Archive (or `--hard` delete) a block |
+| `mblk reset <block>` | Clear memory and session |
+| `mblk service install` | Auto-start on boot |
+| `mblk shutdown` | Stop everything |
+
+<details>
+<summary><b>All server commands</b></summary>
+
+| Command | What it does |
+|:---|:---|
+| `mblk server start` | Start the API & web UI server |
+| `mblk server stop` | Stop the server |
+| `mblk server status` | Show server PID and URL |
+| `mblk server token` | View or regenerate auth token |
+| `mblk restart` | Full restart of blocks + server |
 | `mblk restore <name>` | Restore an archived block |
-| `mblk reset <block>` | Reset memory, costs, and session (use `--hard` to wipe identity) |
-| `mblk permissions <block>` | View or update block permissions |
-| `mblk settings [plugin]` | View or edit plugin settings |
-| `mblk add [plugin]` | Install a plugin (no args lists available) |
-| `mblk remove <plugin>` | Remove an installed plugin |
-| `mblk server start` | Start the web UI and API server |
-| `mblk server stop` | Stop the running server |
-| `mblk server status` | Show server status |
-| `mblk server token` | View or regenerate the API auth token |
-| `mblk service install` | Register memoryblock to start on boot/login |
-| `mblk shutdown` | Stop all blocks and the server |
-| `mblk restart` | Full restart — shutdown then start everything as daemons |
+| `mblk permissions <block>` | View/edit block permissions |
+| `mblk settings [plugin]` | View/edit plugin settings |
 
-Full reference: [command docs](https://docs.memoryblock.io/commands/)
+</details>
 
-## Plugins
+## Configuration
 
-Blocks come with a core set of tools. Need more? Add them:
+No more hunting for dotfiles:
 
 ```bash
-mblk add web-search    # Enables high-fidelity SERP querying
-mblk add fetch-webpage # Extracts and chunks text from structured URLs
-mblk add agents        # Allows blocks to spawn ephemeral sub-agents
+mblk config           # global config
+mblk config auth      # API keys and credentials
+mblk config <block>   # block-specific config
 ```
 
-Adapters for **OpenAI, Anthropic, Google Gemini, and AWS Bedrock** are natively supported out-of-the-box. Adding a custom provider adapter requires implementing a single unified payload interface.
+Opens in your preferred editor (`$EDITOR` → `nano` → `vi` → `notepad`). Credentials are skippable during setup — add them whenever you're ready.
 
-## Monorepo Architecture
+## How It Works
 
-`memoryblock` is built as a highly modular TypeScript monorepo utilizing a strict one-way Directed Acyclic Graph (DAG) for dependency management. All sub-packages are independently publishable.
+```
+~/.memoryblock/ws/
+├── config.json          # global settings
+├── auth.json            # provider credentials
+├── founder.md           # your profile (shared across blocks)
+└── blocks/
+    ├── home/
+    │   ├── config.json  # block settings, adapter, permissions
+    │   ├── monitor.md   # agent identity and personality
+    │   ├── memory.md    # persistent context across sessions
+    │   ├── session.json # crash-recovery session state
+    │   └── logs/        # full conversation history
+    └── ops-monitor/
+        └── ...
+```
 
-| Package | Responsibility |
+Each block is fully self-contained. To back up an agent, copy its folder. To move it to another server, paste it. No databases, no migrations.
+
+## Architecture
+
+Built as a modular TypeScript monorepo with a strict DAG dependency graph:
+
+| Package | Role |
 |:---|:---|
-| `memoryblock` | Global executable wrapper, setup tooling, and CLI orchestration. |
-| `@memoryblock/core` | Extracted engine runtime (Gatekeeper, Memory Manager, Monitor loops). |
-| `@memoryblock/types` | Centralized Zod validation schemas and TypeScript interfaces. |
-| `@memoryblock/daemon` | Low-level OS process spawner and background lifecycle manager. |
-| `@memoryblock/adapters` | Unified REST/SDK implementations for LLM providers. |
-| `@memoryblock/channels` | Transport layer for CLI, WebSockets, and messaging platforms. |
-| `@memoryblock/tools` | Core functional schemas (File I/O, OS interactions). |
-| `@memoryblock/api` | Fast, dependency-injected HTTP web server integration. |
-| `@memoryblock/locale` | Formatting tools and centralized translation strings. |
-| `@memoryblock/web` | Standalone UI distribution package. |
+| `memoryblock` | CLI entry point and setup tooling |
+| `@memoryblock/core` | Engine runtime — Monitor, Gatekeeper, Memory Manager |
+| `@memoryblock/tools` | 22+ built-in tools (files, shell, system) |
+| `@memoryblock/api` | HTTP & WebSocket server (`node:http` + `ws`) |
+| `@memoryblock/adapters` | LLM provider implementations |
+| `@memoryblock/channels` | Transport — CLI, WebSocket, Telegram |
+| `@memoryblock/types` | Shared TypeScript interfaces |
+| `@memoryblock/daemon` | Background process lifecycle |
+| `@memoryblock/web` | Web dashboard UI |
+| `@memoryblock/locale` | i18n and formatting |
 
-## Community & Support
+## Contributing & Support
 
-- **Contributing**: We welcome PRs! See [CONTRIBUTING.md](.github/CONTRIBUTING.md).
-- **Support**: If you find `memoryblock` useful, please consider [sponsoring the project](https://github.com/sponsors/mgks) or giving it a star ⭐.
+We welcome PRs! See [CONTRIBUTING.md](.github/CONTRIBUTING.md).
+
+If `memoryblock` is useful to you, consider [sponsoring the project](https://github.com/sponsors/mgks) or giving it a ⭐.
 
 ## The `memoryblock` Ecosystem
 

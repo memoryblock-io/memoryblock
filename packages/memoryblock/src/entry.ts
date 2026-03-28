@@ -1,10 +1,10 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 /**
  * memoryblock CLI — Main Entry Point
  *
- * This is the CLI implementation that runs under Bun.
- * Loaded by bin/mblk.js after Bun bootstrapping.
+ * Runs on Bun (primary, faster) or Node.js ≥20 (fallback).
+ * Loaded by bin/mblk.js after runtime detection.
  */
 
 import { Command } from 'commander';
@@ -26,6 +26,9 @@ import { deleteCommand, restoreCommand } from './commands/delete.js';
 import { permissionsCommand } from './commands/permissions.js';
 import { pluginSettingsCommand } from './commands/plugin-settings.js';
 import { serviceInstallCommand, serviceUninstallCommand, serviceStatusCommand } from './commands/service.js';
+import { superblockCommand } from './commands/superblock.js';
+import { configCommand } from './commands/config.js';
+import { checkForUpdate } from './utils/version-check.js';
 
 (async () => {
 
@@ -353,6 +356,42 @@ program
         }
     });
 
+program
+    .command('superblock <block>')
+    .description('Grant a block full system access (shell, files, unrestricted).')
+    .option('--off', 'Revoke superblock privileges and restore sandbox')
+    .action(async (block: string, opts: { off?: boolean }) => {
+        try {
+            await superblockCommand(block, opts);
+        } catch (err) {
+            log.error((err as Error).message);
+            process.exit(0);
+        }
+    });
+
+program
+    .command('config [target]')
+    .description('Open config file in your editor (global, auth, or <block-name>).')
+    .option('--path', 'Print the file path instead of opening editor')
+    .action(async (target: string | undefined, opts: { path?: boolean }) => {
+        try {
+            await configCommand(target, opts);
+        } catch (err) {
+            log.error((err as Error).message);
+            process.exit(0);
+        }
+    });
+
 program.parse();
+
+// Non-blocking version check — runs after command completes
+if (process.stdout.isTTY && !process.argv.includes('--version')) {
+    checkForUpdate(version).then(result => {
+        if (result?.updateAvailable) {
+            console.log(`\n  \x1b[33m⬡\x1b[0m Update available: \x1b[2m${result.current}\x1b[0m → \x1b[32m${result.latest}\x1b[0m`);
+            console.log(`    Run \x1b[2mnpm install -g memoryblock\x1b[0m to update\n`);
+        }
+    }).catch(() => {});
+}
 
 })();

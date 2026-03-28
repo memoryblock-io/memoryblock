@@ -9,8 +9,10 @@ import { log } from '@memoryblock/core';
 
 import { PROVIDERS, CHANNELS, PLUGINS, PROVIDER_AUTH, CHANNEL_AUTH } from '../constants.js';
 
-// Brand accent
-const ACCENT = chalk.hex('#805AD5');
+// Brand palette — matches web UI CSS vars
+const ACCENT = chalk.hex('#7C3AED');  // Primary accent (violet-600)
+const ACCENT2 = chalk.hex('#AF52DE'); // Secondary accent (purple, dark mode)
+const GLOW = chalk.hex('#b344ff');    // AI glow purple
 const DIM = chalk.dim;
 
 /**
@@ -114,6 +116,7 @@ export async function initCommand(options?: { nonInteractive?: boolean }): Promi
   }
 
   // ─── Step 4: API Keys ───────────────────────────────
+  p.log.info(DIM('Press Enter to skip any credential — configure later with: mblk config auth'));
   const authData: Record<string, Record<string, string>> = {};
 
   for (const provider of (selectedProviders as string[])) {
@@ -224,12 +227,29 @@ export async function initCommand(options?: { nonInteractive?: boolean }): Promi
   await writeJson(getConfigPath(), defaultConfig);
   await writeJson(getAuthPath(), authData);
 
+  // ─── Step 7: Install Selected Plugins ────────────────
+  const pluginList = Array.isArray(selectedPlugins) ? selectedPlugins as string[] : [];
+  if (pluginList.length > 0) {
+    const s2 = p.spinner();
+    for (const plugin of pluginList) {
+      s2.start(`Installing plugin: ${plugin}...`);
+      try {
+        const { addCommand } = await import('./plugins.js');
+        await addCommand(plugin);
+        s2.stop(`${plugin} ✓`);
+      } catch {
+        s2.stop(`${plugin} ✗ (install later with: mblk add ${plugin})`);
+      }
+    }
+  }
+
   // ─── Done ───────────────────────────────────────────
   console.log('');
   p.note(
     [
       ...results.map(r => `${r.ok ? chalk.green('✓') : chalk.yellow('○')} ${r.name}`),
       ...(results.length === 0 ? [DIM('No connections configured yet')] : []),
+      ...(pluginList.length > 0 ? ['', DIM(`Plugins: ${pluginList.join(', ')}`)] : []),
       '',
       DIM(`Workspace: ${wsDir}`),
       DIM(`Config:    ${getConfigPath()}`),
@@ -237,5 +257,8 @@ export async function initCommand(options?: { nonInteractive?: boolean }): Promi
     'Setup Complete',
   );
 
-  p.outro(`Run ${ACCENT('mblk start <name>')} to create and start your first block.`);
+  p.outro(
+    `Run ${ACCENT('mblk start <name>')} to create your first block.\n` +
+    DIM(`  Edit credentials later: ${ACCENT('mblk config auth')}`)
+  );
 }
