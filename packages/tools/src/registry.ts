@@ -1,5 +1,5 @@
 import type { ToolDefinition, ToolContext, ToolExecutionResult } from '@memoryblock/types';
-import { log } from 'memoryblock';
+import { log } from '@memoryblock/core';
 import type { Tool } from './base.js';
 import { ToolSandbox } from './sandbox.js';
 
