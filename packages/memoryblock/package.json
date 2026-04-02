@@ -41,7 +41,7 @@
     "@memoryblock/plugin-installer": "workspace:*",
     "@memoryblock/plugin-web-search": "workspace:*",
     "@memoryblock/plugin-fetch-webpage": "workspace:*",
-    "@clack/prompts": "^1.1.0",
+    "@clack/prompts": "^1.2.0",
     "chalk": "^5.4.0",
     "commander": "^13.0.0"
   },
