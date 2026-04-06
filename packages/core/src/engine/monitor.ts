@@ -274,7 +274,6 @@ export class Monitor {
 
     private async runConversationLoop(sourceChannel?: string): Promise<void> {
         const { adapter, blockConfig, blockPath } = this;
-        const toolsUsedThisTurn: string[] = [];
 
         while (this.running) {
             const tools = this.getToolDefinitions();
@@ -291,19 +290,24 @@ export class Monitor {
             this.messages.push(response.message);
 
             if (response.stopReason === 'tool_use' && response.message.toolCalls) {
-                // Accumulate tool names for post-response footer
-                for (const tc of response.message.toolCalls) {
-                    toolsUsedThisTurn.push(`[${tc.name}]`);
-                }
                 const toolNames = response.message.toolCalls.map(tc => `[${tc.name}]`).join(' ');
                 log.system(blockConfig.name, `\nTOOLS: ${toolNames}`);
+
+                // Send immediate notification so user knows tools are running in the background
+                await this.channel.send({
+                    blockName: this.blockConfig.name,
+                    monitorName: this.monitorName,
+                    content: `⚙️  Using tools: ${toolNames}`,
+                    isSystem: false,
+                    timestamp: new Date().toISOString(),
+                });
 
                 const toolResults = await this.dispatchToolCalls(response.message.toolCalls);
 
                 // CRITICAL: Every tool_use must have a corresponding tool_result in the very next message
                 this.messages.push({ role: 'tool', toolResults });
 
-                if (response.message.toolCalls.some((tc: any) => tc.name === 'list_tools_available')) {
+                if (response.message.toolCalls.some(tc => tc.name === 'list_tools_available')) {
                     this.toolsDiscovered = true;
                     this.toolsUsedThisCycle = false;
                 } else if (this.toolsDiscovered) {
@@ -320,17 +324,6 @@ export class Monitor {
             if (response.message.content) {
                 // Send response (token info passed as metadata)
                 await this.sendToChannel(response.message.content, sourceChannel, this.costTracker.getPerTurnReport());
-            }
-
-            // Send accumulated tool usage as a compact footer after the response
-            if (toolsUsedThisTurn.length > 0) {
-                await this.channel.send({
-                    blockName: this.blockConfig.name,
-                    monitorName: this.monitorName,
-                    content: `⚙️ TOOLS: ${toolsUsedThisTurn.join(' ')}`,
-                    isSystem: true,
-                    timestamp: new Date().toISOString(),
-                });
             }
 
             // Trim history AFTER sending response — keeps API messages lean
@@ -456,7 +449,7 @@ export class Monitor {
                 tools: { enabled: ['*'], sandbox: false }
             };
 
-            await saveBlockConfig(blockPath, config as any);
+            await saveBlockConfig(blockPath, config as BlockConfig);
             await savePulseState(blockPath, {
                 status: 'SLEEPING',
                 lastRun: new Date().toISOString(),

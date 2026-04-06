@@ -29,15 +29,15 @@ import { setLocale } from '@memoryblock/locale';
 /** 
  * Wraps Zod schema parsing to provide human-readable errors.
  */
-function parseConfig<T>(schema: { parse: (data: any) => T }, data: any, filePath: string): T {
+function parseConfig<T>(schema: { parse: (data: unknown) => T }, data: unknown, filePath: string): T {
     try {
         return schema.parse(data) as T;
-    } catch (err: any) {
-        if (err && err.issues) {
-            const issues = err.issues.map((i: any) => `  - [${i.path.join('.') || 'root'}]: ${i.message}`).join('\n');
+    } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'issues' in err) {
+            const issues = (err as any).issues.map((i: any) => `  - [${i.path.join('.') || 'root'}]: ${i.message}`).join('\n');
             throw new Error(`Configuration error in ${filePath}:\n${issues}\n\nPlease fix the file to continue.`);
         }
-        throw new Error(`Failed to parse ${filePath}: ${err.message}`);
+        throw new Error(`Failed to parse ${filePath}: ${(err as Error).message}`);
     }
 }
 

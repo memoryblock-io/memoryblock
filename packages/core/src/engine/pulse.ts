@@ -1,8 +1,9 @@
+import { totalmem } from 'node:os';
 import { promises as fsp } from 'node:fs';
 import { join } from 'node:path';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { PulseState, PulseInstruction, BlockConfig } from '@memoryblock/types';
+import type { PulseInstruction, BlockConfig } from '@memoryblock/types';
 import { loadPulseState, savePulseState, getWsRoot } from '../utils/config.js';
 import { log } from '../utils/logger.js';
 
@@ -240,7 +241,7 @@ export class PulseEngine {
             if (memMatch) {
                 const [, op, val] = memMatch;
                 const memInfo = process.memoryUsage();
-                const totalMem = require('node:os').totalmem();
+                const totalMem = totalmem();
                 const percent = (memInfo.rss / totalMem) * 100;
                 const threshold = parseInt(val, 10);
                 switch (op) {
