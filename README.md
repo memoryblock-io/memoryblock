@@ -30,7 +30,7 @@
   <!-- PREVIEW -->
   <p>
     <br/>
-    <img width="800" alt="memoryblock preview" src="https://github.com/user-attachments/assets/39fa464b-9cda-498c-a04c-b817b0af826c" />
+    <img width="720" alt="memoryblock preview" src="https://github.com/user-attachments/assets/39fa464b-9cda-498c-a04c-b817b0af826c" />
     <br/>
     <sup><i>memoryblock web client dashboard preview</i></sup>
   </p>
@@ -55,9 +55,9 @@ Memoryblock uses specific terms that mean different things than the typical AI l
 ```
 Founder (you)
 └── Block: home
-    └── Monitor: 🤖 Nova  ← the AI running inside this block
-        ├── Agent: "research"  ← temporary sub-task worker
-        └── Agent: "writer"   ← another temporary worker
+    └── Monitor: 👱🏼‍♀️ Nova  ← the AI assistant running inside this block
+        ├── Agent: 🤖 "researcher"  ← temporary sub-task worker
+        └── Agent: 🤖 "writer"      ← another temporary worker
 ```
 
 Monitors are persistent — they remember everything across sessions. Agents are disposable — they exist only for the task that spawned them.
@@ -162,12 +162,12 @@ Memoryblock is designed from the ground up to minimize token consumption:
 Monitors can spawn agents for parallel work:
 
 ```
-Monitor: 🤖 Nova (home block)
-├── create_agent("research", "Find pricing for competitor X")
+Monitor: 👱🏼‍♀️ Nova (home block)
+├── create_agent("researcher", "Find pricing for competitor X")
 ├── create_agent("writer", "Draft the comparison doc")
-├── query_agent("research")  → gets results
+├── query_agent("researcher")  → gets results
 ├── message_agent("writer", "Here's the data from research...")
-└── terminate_agent("research")  → cleanup
+└── terminate_agent("researcher")  → cleanup
 ```
 
 Agents run in the block's `agents/` directory with their own isolated context. The monitor can message them asynchronously without blocking its own conversation. Agents are ephemeral — they can't create other agents, and they have a limited tool set compared to the monitor.
@@ -178,7 +178,7 @@ Run blocks as background daemons with built-in cron scheduling:
 
 ```bash
 mblk start ops-monitor -d          # daemon mode
-mblk service install                # auto-start on boot (launchd / systemd)
+mblk service install               # auto-start on boot (launchd / systemd)
 ```
 
 Your monitor can schedule its own tasks:
@@ -231,7 +231,7 @@ mblk superblock ops-monitor --off  # revoke
 | `mblk shutdown` | Stop everything |
 
 <details>
-<summary><b>Server & advanced commands</b></summary>
+<summary><b>Server & Advanced Commands</b></summary>
 
 | Command | What it does |
 |:---|:---|
@@ -250,17 +250,17 @@ mblk superblock ops-monitor --off  # revoke
 
 ```
 ~/.memoryblock/ws/
-├── config.json          # global settings
-├── auth.json            # provider credentials
-├── founder.md           # your profile (shared across blocks)
+├── config.json           # global settings
+├── auth.json             # provider credentials
+├── founder.md            # your profile (shared across blocks)
 └── blocks/
     ├── home/
-    │   ├── config.json  # block settings, adapter, permissions
-    │   ├── monitor.md   # monitor identity and personality
-    │   ├── memory.md    # persistent context across sessions
-    │   ├── session.json # crash-recovery session state
-    │   ├── crons.json   # scheduled background tasks
-    │   ├── agents/      # ephemeral sub-agent workspaces
+    │   ├── config.json   # block settings, adapter, permissions
+    │   ├── monitor.md    # monitor identity and personality
+    │   ├── memory.md     # persistent context across sessions
+    │   ├── session.json  # crash-recovery session state
+    │   ├── crons.json    # scheduled background tasks
+    │   ├── agents/       # ephemeral sub-agent workspaces
     │   │   ├── research/
     │   │   │   ├── config.json  # sandboxed config
     │   │   │   ├── memory.md    # agent memory
@@ -268,7 +268,7 @@ mblk superblock ops-monitor --off  # revoke
     │   │   │   └── logs/
     │   │   └── writer/
     │   │       └── ...
-    │   └── logs/        # full conversation history
+    │   └── logs/         # full conversation history
     └── ops-monitor/
         └── ...
 ```
