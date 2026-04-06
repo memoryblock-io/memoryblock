@@ -54,7 +54,7 @@ export class WebChannel implements Channel {
                 // Enqueue write to prevent race conditions during rapid writes
                 this.pendingWrite = this.pendingWrite.then(() =>
                     fsp.writeFile(this.chatFile, JSON.stringify(msgs, null, 4), 'utf8')
-                ).catch(() => {});
+                ).catch(() => { });
             }
         } catch {
             // chat.json doesn't exist or is invalid, ignore
@@ -100,16 +100,102 @@ export class WebChannel implements Channel {
         }
     }
 
+    /**
+     * Interactive Tool Approval via file-based lock.
+     * 
+     * 1. Write an approval_request.json to the block path
+     * 2. Broadcast APPROVAL_REQUIRED via WebSocket (if API server is running)
+     * 3. Poll the file for a human decision (approve/deny)
+     * 4. Timeout after 5 minutes → auto-deny
+     */
     async requestApproval(req: ApprovalRequest): Promise<boolean> {
-        // Not supporting dynamic tool approval over WebChat natively yet
-        await this.send({
-            blockName: req.blockName,
-            monitorName: req.monitorName,
-            content: `[System] Action blocked because Web Channel doesn't support manual approvals yet. Action: ${req.toolName}`,
-            isSystem: true,
-            timestamp: new Date().toISOString()
-        });
-        return false;
+        const approvalFile = join(this.blockPath, 'approval_request.json');
+
+        try {
+            // 1. Write the approval request to disk
+            const payload = {
+                id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                toolName: req.toolName,
+                toolInput: req.toolInput,
+                description: req.description,
+                blockName: req.blockName,
+                monitorName: req.monitorName,
+                status: 'pending',
+                createdAt: new Date().toISOString(),
+            };
+
+            await fsp.writeFile(approvalFile, JSON.stringify(payload, null, 2), 'utf8');
+
+            // 2. Broadcast to WebSocket subscribers via the API server
+            try {
+                const port = process.env.MBLK_PORT || 8420;
+                await fetch(`http://127.0.0.1:${port}/api/blocks/${this.blockName}/stream`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'approval_required',
+                        approval: payload,
+                    })
+                });
+            } catch {
+                // API server not running — approval still works via file polling
+            }
+
+            // 3. Notify the chat log so the user sees the request
+            await this.send({
+                blockName: req.blockName,
+                monitorName: req.monitorName,
+                content: `⚠️ **Approval Required**\n\n\`${req.toolName}\`: ${req.description}\n\n_Approve or deny via the Web UI or POST to /api/blocks/${this.blockName}/approve_`,
+                isSystem: true,
+                timestamp: new Date().toISOString(),
+            });
+
+            // 4. Poll for human decision (max 5 minutes)
+            const TIMEOUT_MS = 5 * 60 * 1000;
+            const POLL_MS = 500;
+            const startTime = Date.now();
+
+            while (Date.now() - startTime < TIMEOUT_MS) {
+                await new Promise(r => setTimeout(r, POLL_MS));
+
+                try {
+                    const raw = await fsp.readFile(approvalFile, 'utf8');
+                    const data = JSON.parse(raw);
+
+                    if (data.status === 'approved') {
+                        await this.cleanupApproval(approvalFile);
+                        return true;
+                    }
+                    if (data.status === 'denied') {
+                        await this.cleanupApproval(approvalFile);
+                        return false;
+                    }
+                    // Still pending — continue polling
+                } catch {
+                    // File was deleted or corrupted — treat as denied
+                    return false;
+                }
+            }
+
+            // 5. Timeout — auto-deny and clean up
+            await this.send({
+                blockName: req.blockName,
+                monitorName: req.monitorName,
+                content: `⏰ Approval for \`${req.toolName}\` timed out after 5 minutes. Action denied.`,
+                isSystem: true,
+                timestamp: new Date().toISOString(),
+            });
+            await this.cleanupApproval(approvalFile);
+            return false;
+
+        } catch (err) {
+            console.error('[WebChannel] Approval system error:', err);
+            return false;
+        }
+    }
+
+    private async cleanupApproval(approvalFile: string): Promise<void> {
+        try { await fsp.unlink(approvalFile); } catch { /* already cleaned */ }
     }
 
     async start(): Promise<void> {
@@ -117,7 +203,7 @@ export class WebChannel implements Channel {
         try {
             // Initial scan for any pending messages
             await this.processChatLog();
-            
+
             // fs.watch — primary mechanism, fires on file changes
             let debounceTimer: NodeJS.Timeout | null = null;
             this.watcher = watch(this.blockPath, (eventType, filename) => {
