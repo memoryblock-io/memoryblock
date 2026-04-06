@@ -348,7 +348,20 @@ export class ApiServer {
                 const { execSync, spawn } = await import('node:child_process');
 
                 // 1. Install the new version globally (files on disk updated)
-                const output = execSync('npm install -g memoryblock 2>&1', {
+                // Dynamically detect which package manager originally installed memoryblock
+                // based on the execution path to prevent split-brain global installations.
+                let installCmd = 'npm install -g memoryblock 2>&1';
+                const execPathStr = process.argv[1] || '';
+
+                if (execPathStr.includes('.bun')) {
+                    installCmd = 'bun install -g memoryblock 2>&1';
+                } else if (execPathStr.includes('pnpm')) {
+                    installCmd = 'pnpm add -g memoryblock 2>&1';
+                } else if (execPathStr.includes('yarn')) {
+                    installCmd = 'yarn global add memoryblock 2>&1';
+                }
+
+                const output = execSync(installCmd, {
                     timeout: 120_000,
                     encoding: 'utf-8',
                 });
@@ -445,6 +458,8 @@ export class ApiServer {
                 case 'reset': return await this.handleResetBlock(blockName, url);
                 case 'chat': return await this.handleChat(blockName, req);
                 case 'stream': return await this.handleStream(blockName, req);
+                case 'approve': return await this.handleApproval(blockName, 'approved');
+                case 'deny': return await this.handleApproval(blockName, 'denied');
                 default: break;
             }
         }
@@ -781,6 +796,57 @@ export class ApiServer {
             return this.json({ ok: true });
         } catch {
             return this.error(400, 'Invalid stream payload');
+        }
+    }
+
+    /**
+     * POST /api/blocks/:name/approve or /api/blocks/:name/deny
+     * Resolves a pending tool approval by writing the decision into approval_request.json.
+     * The WebChannel's polling loop picks this up and unblocks the Monitor.
+     */
+    private async handleApproval(blockName: string, decision: 'approved' | 'denied'): Promise<Response> {
+        try {
+            const globalConfig = await loadGlobalConfig();
+            const blockPath = join(resolveBlocksDir(globalConfig), blockName);
+            const approvalFile = join(blockPath, 'approval_request.json');
+
+            try {
+                const raw = await readFile(approvalFile, 'utf-8');
+                const data = JSON.parse(raw);
+
+                if (data.status !== 'pending') {
+                    return this.error(409, `Approval already resolved: ${data.status}`);
+                }
+
+                data.status = decision;
+                data.resolvedAt = new Date().toISOString();
+
+                const { writeFile } = await import('node:fs/promises');
+                await writeFile(approvalFile, JSON.stringify(data, null, 2), 'utf-8');
+
+                // Broadcast resolution to WebSocket subscribers
+                const subs = this.subscribers.get(blockName);
+                if (subs && subs.size > 0) {
+                    const msg = JSON.stringify({
+                        type: 'approval_resolved',
+                        decision,
+                        toolName: data.toolName,
+                    });
+                    for (const ws of subs) {
+                        try { ws.send(msg); } catch { /* ignore */ }
+                    }
+                }
+
+                return this.json({
+                    success: true,
+                    message: `Tool "${data.toolName}" ${decision}.`,
+                    decision,
+                });
+            } catch {
+                return this.error(404, `No pending approval found for block "${blockName}".`);
+            }
+        } catch (err) {
+            return this.error(500, `Approval failed: ${(err as Error).message}`);
         }
     }
 
