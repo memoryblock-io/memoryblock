@@ -133,11 +133,23 @@ export class CLIChannel implements Channel {
         }
     }
 
+    /**
+     * Prepare the CLI for an incoming stream — prints the monitor header
+     * so streamed text has proper speaker attribution.
+     */
+    prepareStream(monitorName: string, blockName: string): void {
+        if (this.lastSpeakerName !== monitorName) {
+            console.log('');
+            const header = `${THEME.brandBg(` ${monitorName} `)}${monitorName !== blockName ? ` ${THEME.system(blockName)}` : ''}`;
+            console.log(header);
+            console.log('');
+            this.lastSpeakerName = monitorName;
+        }
+    }
+
     async streamChunk(chunk: string): Promise<void> {
         if (!this.isStreaming) {
             this.isStreaming = true;
-            // The header will be printed by the preceding tool message or the next complete send 
-            // but if stream starts and we don't have a header, we just start streaming.
         }
         process.stdout.write(chalk.white(chunk));
     }

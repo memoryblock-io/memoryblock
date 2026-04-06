@@ -134,10 +134,10 @@ async function setupBlockRuntimeLogs(
             activeChannels.push(new channels.TelegramChannel(blockConfig.name, chatId, enableAlerts));
         }
 
-        // Add WebChannel when: daemon mode, explicit 'web' or 'multi' channel, or block config says web
-        if (options?.daemon || channelType === 'web' || channelType === 'multi' ||
-            blockConfig.channel.type?.includes('web')) {
-            activeChannels.push(new channels.WebChannel(blockConfig.name, blockPath));
+        // Add SharedChannel when: daemon mode, explicit 'shared/web' or 'multi' channel, or block config says shared/web
+        if (options?.daemon || channelType === 'shared' || channelType === 'web' || channelType === 'multi' ||
+            blockConfig.channel.type?.includes('shared') || blockConfig.channel.type?.includes('web')) {
+            activeChannels.push(new channels.SharedChannel(blockConfig.name, blockPath));
         }
 
         // Wrap them in the MultiChannelManager
@@ -156,70 +156,51 @@ async function setupBlockRuntimeLogs(
 /**
  * Attach a CLI readline to a running daemon instance.
  * Instead of starting a new Monitor, we write messages to chat.json
- * and watch for assistant replies — piggybacking on the WebChannel.
+ * and watch for assistant replies — piggybacking on the SharedChannel.
  */
 async function attachCLIToRunningBlock(blockName: string, blockPath: string): Promise<void> {
-    const { createInterface, moveCursor, clearLine } = await import('node:readline');
+    const { CLIChannel } = await import('@memoryblock/channels');
     const { watch } = await import('node:fs');
 
     const chatFile = join(blockPath, 'chat.json');
-    const THEME = {
-        brand: chalk.hex('#7C3AED'),
-        brandBg: chalk.bgHex('#7C3AED').white.bold,
-        founderBg: chalk.bgHex('#1c64c8ff').white.bold,
-        system: chalk.hex('#6B7280'),
-        dim: chalk.dim,
-    };
+    const streamFile = join(blockPath, '.stream');
 
-    // Load block config to get monitor name
+    // Load block config to get monitor name/emoji
     const blockConfig = await loadBlockConfig(blockPath);
     const monitorLabel = blockConfig.monitorEmoji
         ? `${blockConfig.monitorEmoji} ${blockConfig.monitorName || 'Monitor'}`
         : blockConfig.monitorName || 'Monitor';
 
-    console.log(THEME.system('  ╭───────────────────────────────────────────────────╮'));
-    console.log(THEME.system('  │') + ' attached to running instance '
-        + THEME.system('                     │'));
-    console.log(THEME.system('  │') + ' type a message and press enter. ctrl+c to detach. '
-        + THEME.system('│'));
-    console.log(THEME.system('  ╰───────────────────────────────────────────────────╯'));
-    console.log('');
+    const cli = new CLIChannel(blockName);
 
-    // Track which messages we've already displayed
     let lastKnownLength = 0;
+    let lastStreamLength = 0;
+
     try {
         const raw = await fsp.readFile(chatFile, 'utf8');
         const msgs = JSON.parse(raw);
         lastKnownLength = msgs.length;
-    } catch {
-        // chat.json doesn't exist yet, that's fine
-    }
+    } catch { /* ignore */ }
 
-    // Helper: format and display a chat message (matches CLIChannel style)
-    const displayMessage = (m: any) => {
-        if (m.role === 'system') {
-            // System messages: compact + dimmed (same as CLIChannel)
-            console.log(THEME.system(`  │  ${(m.content || '').replace(/\n/g, '\n  │  ')}`));
-        } else if (m.role === 'assistant') {
-            console.log('');
-            console.log(`${THEME.brandBg(` ${monitorLabel} `)} ${THEME.system(blockName)}`);
-            console.log('');
-            const formatted = (m.content || '')
-                .replace(/\*\*(.*?)\*\*/g, (_: string, p1: string) => chalk.bold(p1))
-                .replace(/`([^`]+)`/g, (_: string, p1: string) => chalk.cyan(p1))
-                .replace(/_(.*?)_/g, (_: string, p1: string) => chalk.italic(p1));
-            console.log(formatted);
-            if (m.costReport) {
-                console.log('');
-                console.log(THEME.dim(`[${m.costReport}]`));
-            }
-            console.log('');
-        }
-    };
+    cli.onMessage(async (msg) => {
+        try {
+            let msgs: any[] = [];
+            try {
+                msgs = JSON.parse(await fsp.readFile(chatFile, 'utf8'));
+            } catch { msgs = []; }
 
-    // Helper: check for pending approval and prompt the user
+            msgs.push({
+                role: 'user',
+                content: msg.content,
+                timestamp: msg.timestamp,
+                processed: false,
+            });
+            lastKnownLength = msgs.length; // Don't re-display our own message
+            await fsp.writeFile(chatFile, JSON.stringify(msgs, null, 4), 'utf8');
+        } catch { /* ignore */ }
+    });
+
     let approvalActive = false;
-    let approvalToolName = '';
     const checkApproval = async () => {
         if (approvalActive) return;
         const approvalFile = join(blockPath, 'approval_request.json');
@@ -228,154 +209,101 @@ async function attachCLIToRunningBlock(blockName: string, blockPath: string): Pr
             const data = JSON.parse(raw);
             if (data.status === 'pending') {
                 approvalActive = true;
-                approvalToolName = data.toolName;
-                console.log('');
-                console.log(chalk.bgYellow.black(' ⚠ APPROVAL REQUIRED '));
-                console.log('');
-                console.log(`  ${chalk.bold(data.toolName)} ${THEME.dim('·')} ${THEME.dim(data.toolDescription || data.description || '')}`);
-                console.log(`  ${THEME.dim(`${data.blockName} · ${data.monitorName}`)}`);
-                console.log('');
-                console.log(`  ${chalk.yellow('A')} ${THEME.dim('or')} ${chalk.yellow('Enter')} ${THEME.dim('= approve')}  ·  ${chalk.yellow('D')} ${THEME.dim('= deny')}`);
-                console.log('');
+                const approved = await cli.requestApproval(data);
+                
+                // Write decision
+                data.status = approved ? 'approved' : 'denied';
+                data.resolvedAt = new Date().toISOString();
+                await fsp.writeFile(approvalFile, JSON.stringify(data, null, 2), 'utf8');
+                approvalActive = false;
             }
-        } catch { /* no approval pending */ }
+        } catch { /* ignore */ }
     };
 
-    // Watch chat.json for new assistant responses
+    const flushStream = async () => {
+        try {
+            const stat = await fsp.stat(streamFile);
+            if (stat.size < lastStreamLength) {
+                lastStreamLength = 0;
+            }
+            if (stat.size > lastStreamLength) {
+                // Print monitor header before the first chunk of a new stream
+                if (lastStreamLength === 0) {
+                    cli.prepareStream(monitorLabel, blockName);
+                }
+                const raw = await fsp.readFile(streamFile);
+                if (raw.length > lastStreamLength) {
+                    const chunk = raw.subarray(lastStreamLength).toString('utf8');
+                    await cli.streamChunk(chunk);
+                    lastStreamLength = raw.length;
+                }
+            }
+        } catch {
+            lastStreamLength = 0; // File deleted
+        }
+    };
+
+    const flushChat = async () => {
+        try {
+            const msgs = JSON.parse(await fsp.readFile(chatFile, 'utf8'));
+            if (msgs.length > lastKnownLength) {
+                for (let i = lastKnownLength; i < msgs.length; i++) {
+                    const m = msgs[i];
+                    if (m.role !== 'user') {
+                        await cli.send({
+                            blockName,
+                            monitorName: m.role === 'system' ? 'system' : monitorLabel,
+                            content: m.content || '',
+                            isSystem: m.role === 'system',
+                            timestamp: m.timestamp,
+                            costReport: m.costReport
+                        });
+                    }
+                }
+                lastKnownLength = msgs.length;
+                lastStreamLength = 0; 
+            }
+        } catch { /* ignore */ }
+    };
+
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const watcher = watch(blockPath, (_, filename) => {
         if (filename === 'chat.json') {
             if (debounceTimer) clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(async () => {
-                try {
-                    const raw = await fsp.readFile(chatFile, 'utf8');
-                    const msgs = JSON.parse(raw);
-                    for (let i = lastKnownLength; i < msgs.length; i++) {
-                        displayMessage(msgs[i]);
-                    }
-                    lastKnownLength = msgs.length;
-                } catch { /* ignore read errors */ }
-            }, 300);
-        }
-        if (filename === 'approval_request.json') {
-            setTimeout(() => checkApproval(), 200);
+            debounceTimer = setTimeout(flushChat, 100);
+        } else if (filename === '.stream') {
+            flushStream();
+        } else if (filename === 'approval_request.json') {
+            checkApproval();
         }
     });
 
-    // Also poll as fallback (FSEvents can miss cross-process writes)
     const pollInterval = setInterval(async () => {
-        try {
-            const raw = await fsp.readFile(chatFile, 'utf8');
-            const msgs = JSON.parse(raw);
-            if (msgs.length > lastKnownLength) {
-                for (let i = lastKnownLength; i < msgs.length; i++) {
-                    displayMessage(msgs[i]);
-                }
-                lastKnownLength = msgs.length;
-            }
-        } catch { /* ignore */ }
-        // Also poll for approvals
+        // Enforce sequential flush to prevent race conditions during live streaming
+        await flushStream();
+        await flushChat();
         await checkApproval();
-    }, 2000);
+    }, 500);
 
-    // Readline for user input
-    const rl = createInterface({ input: process.stdin, output: process.stdout });
-
-    rl.on('line', async (line: string) => {
-        const content = line.trim();
-        if (!content && !approvalActive) return;
-
-        // Handle approval: A / Enter (empty) / approve = approve, D / deny = deny
-        if (approvalActive) {
-            const lower = content.toLowerCase();
-            const isApprove = lower === 'a' || lower === 'approve' || content === '';
-            const isDeny = lower === 'd' || lower === 'deny';
-
-            if (isApprove || isDeny) {
-                const decision = isApprove ? 'approved' : 'denied';
-                const approvalFile = join(blockPath, 'approval_request.json');
-                try {
-                    const raw = await fsp.readFile(approvalFile, 'utf8');
-                    const data = JSON.parse(raw);
-                    data.status = decision;
-                    data.resolvedAt = new Date().toISOString();
-                    await fsp.writeFile(approvalFile, JSON.stringify(data, null, 2), 'utf8');
-
-                    moveCursor(process.stdout, 0, -1);
-                    clearLine(process.stdout, 0);
-                    if (isApprove) {
-                        console.log(chalk.green(`  ✓ ${approvalToolName} approved`));
-                    } else {
-                        console.log(chalk.red(`  ✗ ${approvalToolName} denied`));
-                    }
-                    console.log('');
-                    approvalActive = false;
-                    approvalToolName = '';
-                } catch (err) {
-                    console.error(THEME.system(`  Failed to resolve: ${(err as Error).message}`));
-                }
-                return;
-            }
-            // If something else typed during approval, treat as regular message
-        }
-
-        if (!content) return;
-
-        // Style the user input
-        moveCursor(process.stdout, 0, -1);
-        clearLine(process.stdout, 0);
-        console.log(`\n${THEME.founderBg(' Founder ')} ${content}`);
-
-        // Write to chat.json so the daemon's WebChannel picks it up
-        try {
-            let msgs: any[] = [];
-            try {
-                const raw = await fsp.readFile(chatFile, 'utf8');
-                msgs = JSON.parse(raw);
-            } catch { msgs = []; }
-
-            msgs.push({
-                role: 'user',
-                content,
-                timestamp: new Date().toISOString(),
-                processed: false,  // WebChannel will pick this up
-            });
-
-            lastKnownLength = msgs.length; // Don't re-display our own message
-            await fsp.writeFile(chatFile, JSON.stringify(msgs, null, 4), 'utf8');
-        } catch (err) {
-            console.error(THEME.system(`  Failed to send: ${(err as Error).message}`));
-        }
-    });
-
-    rl.on('SIGINT', async () => {
-        // Read cost data from disk before detaching
+    const shutdown = async () => {
         try {
             const costRaw = await fsp.readFile(join(blockPath, 'costs.json'), 'utf8');
             const costs = JSON.parse(costRaw);
-            const sessionReport = `${(costs.sessionInput || 0).toLocaleString()} in / ${(costs.sessionOutput || 0).toLocaleString()} out`;
-            const totalReport = `${(costs.totalInput || 0).toLocaleString()} in / ${(costs.totalOutput || 0).toLocaleString()} out`;
             console.log('');
-            console.log(THEME.dim(`  session: ${sessionReport}`));
-            console.log(THEME.dim(`  total: ${totalReport}`));
-        } catch { /* no cost data */ }
+            console.log(chalk.dim(`  session: ${(costs.sessionInput || 0).toLocaleString()} in / ${(costs.sessionOutput || 0).toLocaleString()} out`));
+            console.log(chalk.dim(`  total: ${(costs.totalInput || 0).toLocaleString()} in / ${(costs.totalOutput || 0).toLocaleString()} out`));
+        } catch { /* ignore */ }
 
-        console.log(THEME.dim('\n  Detached from running instance. Daemon continues in background.\n'));
+        console.log(chalk.dim('\nDetached from running instance. Daemon continues in background.\n'));
         watcher.close();
         clearInterval(pollInterval);
         if (debounceTimer) clearTimeout(debounceTimer);
-        rl.close();
+        await cli.stop();
         process.exit(0);
-    });
+    };
 
-    rl.on('close', () => {
-        watcher.close();
-        clearInterval(pollInterval);
-        if (debounceTimer) clearTimeout(debounceTimer);
-    });
-
-    // Keep process alive
-    await new Promise<void>(() => { }); // Block forever until Ctrl+C
+    process.once('SIGINT', shutdown);
+    await cli.start();
 }
 
 
@@ -931,8 +859,9 @@ export async function startCommand(blockName?: string, options?: { channel?: str
         log.dim(`  ${model} · ${channelType} · ${blockConfig.tools.sandbox ? 'sandboxed' : 'unrestricted'}`);
         console.log('');
 
-        // Let daemon init chat.json and WebChannel before tailing
-        await new Promise(r => setTimeout(r, 1500));
+        // It might take a moment for the new daemon to write its .lock file
+        await new Promise(r => setTimeout(r, 2000));
+        // Let daemon init chat.json and SharedChannel before tailing
         await attachCLIToRunningBlock(blockName, blockPath);
     } catch (err) {
         throw new Error(`Failed to spawn daemon: ${(err as Error).message}`);

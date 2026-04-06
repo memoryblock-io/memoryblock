@@ -20,7 +20,7 @@ interface CompatRequest {
     readonly method: string;
     readonly url: string;
     readonly headers: { get(name: string): string | null };
-    json(): Promise<any>;
+    json(): Promise<unknown>;
 }
 
 function readBody(req: IncomingMessage): Promise<string> {
@@ -717,7 +717,7 @@ export class ApiServer {
 
             const chatFile = join(blockPath, 'chat.json');
             
-            let msgs: any[] = [];
+            let msgs: { role: string; content: string; timestamp: string; processed: boolean }[] = [];
             try {
                 const raw = await readFile(chatFile, 'utf8');
                 msgs = JSON.parse(raw);
@@ -761,7 +761,8 @@ export class ApiServer {
                 try {
                     const START_PKG = 'memoryblock/commands';
                     const { startCommand } = await import(START_PKG);
-                    await startCommand(blockName, { channel: 'web', daemon: true });
+                    // Explicitly pass 'shared' so SharedChannel initializes and monitors chat.json
+                    await startCommand(blockName, { channel: 'shared', daemon: true });
                     note = 'Message queued. Block daemon starting up — first response may take a moment.';
                 } catch (startErr) {
                     note = `Message queued, but daemon failed to start: ${(startErr as Error).message}`;
@@ -802,7 +803,7 @@ export class ApiServer {
     /**
      * POST /api/blocks/:name/approve or /api/blocks/:name/deny
      * Resolves a pending tool approval by writing the decision into approval_request.json.
-     * The WebChannel's polling loop picks this up and unblocks the Monitor.
+     * The SharedChannel's polling loop picks this up and unblocks the Monitor.
      */
     private async handleApproval(blockName: string, decision: 'approved' | 'denied'): Promise<Response> {
         try {
@@ -864,8 +865,8 @@ export class ApiServer {
                 installed = JSON.parse(pkgRaw).dependencies || {};
             } catch { /* ignore */ }
 
-            const mapped = plugins.map((p: unknown) => {
-                const plugin = p as any;
+            const mapped = plugins.map((p: any) => {
+                const plugin = p as { id: string; package: string; settings?: Record<string, { default: unknown }> };
                 return {
                     ...plugin,
                     installed: !!installed[plugin.package]
@@ -876,7 +877,7 @@ export class ApiServer {
             for (const p of mapped) {
                 if (p.settings) {
                     const saved = await installer.getPluginSettings(p.id, this.config.workspacePath);
-                    for (const [key, field] of Object.entries(p.settings as Record<string, any>)) {
+                    for (const [key, field] of Object.entries(p.settings as Record<string, { default: unknown }>)) {
                         if (saved[key] !== undefined) {
                             field.default = saved[key];
                         }
@@ -957,7 +958,7 @@ export class ApiServer {
             const body = await req.json();
             const { PluginInstaller } = await import('@memoryblock/plugin-installer');
             const installer = new PluginInstaller();
-            await installer.savePluginSettings(pluginId, body, this.config.workspacePath);
+            await installer.savePluginSettings(pluginId, body as Record<string, unknown>, this.config.workspacePath);
             return this.json({ success: true });
         } catch (err: unknown) {
             return this.error(400, (err as Error).message);
@@ -1003,7 +1004,7 @@ export class ApiServer {
                     logFiles = logFiles.slice(0, 5);
                 }
 
-                const messages: any[] = [];
+                const messages: { role: string; content: string; timestamp: string; processed: boolean }[] = [];
                 for (const file of logFiles) {
                     try {
                         const content = await readFile(join(logsDir, file), 'utf-8');

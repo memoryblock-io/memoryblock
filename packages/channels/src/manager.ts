@@ -71,6 +71,13 @@ export class MultiChannelManager implements Channel {
         }
     }
 
+    prepareStream(monitorName: string, blockName: string): void {
+        const channel = this.channels.get(this.lastActiveChannel);
+        if (channel?.prepareStream) {
+            channel.prepareStream(monitorName, blockName);
+        }
+    }
+
     async requestApproval(request: ApprovalRequest): Promise<boolean> {
         // Route approval request to the currently active channel
         const channel = this.channels.get(this.lastActiveChannel);

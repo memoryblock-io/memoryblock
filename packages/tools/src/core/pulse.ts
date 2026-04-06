@@ -41,7 +41,7 @@ export const setPulseTool: Tool = {
             alert_monitor: { type: 'boolean', description: 'If true, sends result to monitor (costs tokens). Default: false for script/log/webhook, true for cron/alert.' },
             condition: { type: 'string', description: 'Condition expression for alert type (e.g., "memory_percent > 90").' },
         }, ['id', 'type', 'instruction']),
-        requiresApproval: true,
+        requiresApproval: false,
     },
     async execute(params: Record<string, unknown>, context): Promise<ToolExecutionResult> {
         const {
@@ -153,7 +153,7 @@ export const removePulseTool: Tool = {
         parameters: createSchema({
             id: { type: 'string', description: 'The ID of the pulse instruction to remove.' },
         }, ['id']),
-        requiresApproval: true,
+        requiresApproval: false,
     },
     async execute(params: Record<string, unknown>, context): Promise<ToolExecutionResult> {
         const { id } = params as { id: string };
@@ -185,7 +185,7 @@ export const scheduleCronJobTool: Tool = {
             instruction: { type: 'string', description: 'The text instruction to execute when the cron triggers.' },
             target: { type: 'string', description: 'The target block name.' },
         }, ['name', 'cron_expression', 'instruction', 'target']),
-        requiresApproval: true,
+        requiresApproval: false,
     },
     async execute(params: Record<string, unknown>, context): Promise<ToolExecutionResult> {
         // Delegate to set_pulse
@@ -218,7 +218,7 @@ export const removeCronJobTool: Tool = {
         parameters: createSchema({
             name: { type: 'string', description: 'Unique identifier of the cron job' },
         }, ['name']),
-        requiresApproval: true,
+        requiresApproval: false,
     },
     async execute(params: Record<string, unknown>, context): Promise<ToolExecutionResult> {
         return removePulseTool.execute({ id: params.name }, context);

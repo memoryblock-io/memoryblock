@@ -278,6 +278,12 @@ export class Monitor {
         while (this.running) {
             const tools = this.getToolDefinitions();
             
+            // Prepare stream header so the monitor name is printed before the first chunk
+            const displayName = `${this.monitorEmoji} ${this.monitorName}`;
+            if (this.channel.prepareStream) {
+                this.channel.prepareStream(displayName, blockConfig.name);
+            }
+
             const streamCb = this.channel.streamChunk ? (chunk: string) => this.channel.streamChunk!(chunk) : undefined;
             const response = adapter.converseStream && streamCb
                 ? await adapter.converseStream(this.messages, tools, streamCb)
@@ -294,11 +300,12 @@ export class Monitor {
                 log.system(blockConfig.name, `\nTOOLS: ${toolNames}`);
 
                 // Send immediate notification so user knows tools are running in the background
+                // isSystem: true renders as a compact dimmed line under the monitor header
                 await this.channel.send({
                     blockName: this.blockConfig.name,
-                    monitorName: this.monitorName,
-                    content: `⚙️  Using tools: ${toolNames}`,
-                    isSystem: false,
+                    monitorName: `${this.monitorEmoji} ${this.monitorName}`,
+                    content: `⚙️ Using tools: ${toolNames}`,
+                    isSystem: true,
                     timestamp: new Date().toISOString(),
                 });
 
@@ -691,7 +698,7 @@ export class Monitor {
         return [discoveryTool];
     }
 
-    private async sendToChannel(content: string, targetChannel?: string, costReport?: string, sessionReport?: string, totalReport?: string): Promise<void> {
+    private async sendToChannel(content: string, targetChannel?: string, costReport?: string): Promise<void> {
         this.logger.logMonitor(content, {
             channel: targetChannel || this.blockConfig.channel.type,
             monitorName: this.monitorName,
@@ -706,8 +713,6 @@ export class Monitor {
             timestamp: new Date().toISOString(),
             _targetChannel: targetChannel,
             costReport,
-            sessionReport,
-            totalReport,
         });
     }
 

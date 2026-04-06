@@ -201,9 +201,7 @@ export interface ChannelMessage {
     costReport?: string;
     sessionReport?: string;
     totalReport?: string;
-    /** Internal: the channel that originated this message (set by MultiChannelManager). */
     _sourceChannel?: string;
-    /** Internal: the channel to route this message to (set by sendToChannel). */
     _targetChannel?: string;
 }
 
@@ -228,6 +226,8 @@ export interface Channel {
     readonly name: string;
     send(message: ChannelMessage): Promise<void>;
     streamChunk?(chunk: string): Promise<void>;
+    /** Prepare the channel for an incoming stream — print speaker header before first chunk. */
+    prepareStream?(monitorName: string, blockName: string): void;
     onMessage(handler: (message: ChannelMessage) => void): void;
     requestApproval(request: ApprovalRequest): Promise<boolean>;
     start(): Promise<void>;
