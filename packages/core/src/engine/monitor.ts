@@ -38,7 +38,7 @@ export interface MonitorConfig {
  * Features:
  * - Identity (name, emoji, personality) persisted to monitor.md
  * - Conversation logging to logs/
- * - System-level cost tracking (no model tokens wasted)
+ * - System-level token tracking (no model tokens wasted)
  * - Smart memory: saves only key context at threshold/stop
  * - Safe-command auto-execution (lint, build, test, grep — no approval needed)
  * - Sandbox toggle: sandbox=false gives full filesystem access
@@ -59,6 +59,8 @@ export class Monitor {
     private blockConfig: BlockConfig;
     private adapter: LLMAdapter;
     private registry: IToolRegistry;
+    private cronTimer: NodeJS.Timeout | null = null;
+    private _lastCronMinute = -1;
 
     constructor(options: {
         blockPath: string;
@@ -92,7 +94,7 @@ export class Monitor {
         this.running = true;
         const { blockConfig, blockPath } = this;
 
-        // Load previous cost totals
+        // Load previous token totals
         await this.costTracker.load();
 
         await savePulseState(blockPath, {
@@ -130,15 +132,20 @@ export class Monitor {
         });
 
         await this.channel.start();
+
+        // Start internal tick for cron polling (runs every 10 seconds, checks minute match)
+        this.cronTimer = setInterval(() => this.tick(), 10000);
+        this.tick();
     }
 
     async stop(): Promise<void> {
         this.running = false;
+        if (this.cronTimer) clearInterval(this.cronTimer);
 
         // Save smart memory summary before shutdown
         await this.saveSmartMemory();
 
-        // Persist cost data
+        // Persist token data
         await this.costTracker.save();
 
         await this.logger.close();
@@ -166,6 +173,49 @@ export class Monitor {
         log.monitor(this.blockConfig.name, this.monitorName, t.monitor.goingToSleep);
         log.dim(`  ${t.monitor.currentSession}: ${sessionReport}`);
         log.dim(`  ${t.monitor.completeSession}: ${totalReport}`);
+    }
+
+    private async tick(): Promise<void> {
+        if (!this.running) return;
+        try {
+            const cronsPath = join(getWsRoot(), 'crons.json');
+            const data = await fsp.readFile(cronsPath, 'utf8').catch(() => '{}');
+            const crons = JSON.parse(data);
+            
+            const now = new Date();
+            const currentMinute = now.getMinutes();
+            if (this._lastCronMinute === currentMinute) return;
+            this._lastCronMinute = currentMinute;
+
+            for (const [name, job] of Object.entries(crons)) {
+                const j = job as any;
+                if (j.target === this.blockConfig.name) {
+                    const matchPattern = (val: string, current: number) => {
+                        if (val === '*') return true;
+                        if (val.includes('/')) {
+                            const step = parseInt(val.split('/')[1], 10);
+                            return current % step === 0;
+                        }
+                        return parseInt(val, 10) === current;
+                    };
+                    const parts = j.cron_expression.split(' ');
+                    if (parts.length !== 5) continue;
+                    const [min, hour, dom, mon, dow] = parts;
+                    
+                    const isMatch = matchPattern(min, now.getMinutes()) &&
+                                  matchPattern(hour, now.getHours()) &&
+                                  matchPattern(dom, now.getDate()) &&
+                                  matchPattern(mon, now.getMonth() + 1) &&
+                                  matchPattern(dow, now.getDay());
+
+                    if (isMatch) {
+                        log.system(this.blockConfig.name, `Cron event triggered: ${name}`);
+                        // Invoke non-blocking self-directed message
+                        this.handleUserMessage(`Timer elapsed: [${name}]\nInstruction: ${j.instruction}`);
+                    }
+                }
+            }
+        } catch { /* ignore */ }
     }
 
     private async handleUserMessage(content: string, sourceChannel?: string): Promise<void> {
@@ -253,7 +303,7 @@ export class Monitor {
                 ? await adapter.converseStream(this.messages, tools, streamCb)
                 : await adapter.converse(this.messages, tools);
 
-            // System-level cost tracking — no model tokens used
+            // System-level token tracking
             this.memory.trackUsage(response.usage);
             this.costTracker.track(response.usage);
 
@@ -309,7 +359,7 @@ export class Monitor {
                 this.messages = [{ role: 'system', content: systemPrompt }];
                 this.toolsDiscovered = false;
 
-                // Save costs on threshold
+                // Save tokens on threshold
                 await this.costTracker.save();
             }
 
@@ -335,7 +385,7 @@ export class Monitor {
                 '# Memory',
                 '',
                 `> Last session: ${new Date().toISOString()}`,
-                `> Session cost: ${this.costTracker.getSessionReport()}`,
+                `> Session tokens: ${this.costTracker.getSessionReport()}`,
                 '',
                 '## Recent Context',
             ];

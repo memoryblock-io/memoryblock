@@ -2,41 +2,21 @@ import { promises as fsp } from 'node:fs';
 import { join } from 'node:path';
 import type { TokenUsage } from '@memoryblock/types';
 
-/**
- * Pricing per 1M tokens (USD) — system-level, zero model tokens used.
- * Source: AWS Bedrock / Anthropic pricing pages.
- */
-const MODEL_PRICING: Record<string, { input: number; output: number }> = {
-    // Opus
-    'us.anthropic.claude-opus-4-6-v1': { input: 15, output: 75 },
-    'us.anthropic.claude-opus-4-20250514-v1:0': { input: 15, output: 75 },
-    // Sonnet
-    'us.anthropic.claude-sonnet-4-20250514-v1:0': { input: 3, output: 15 },
-    'us.anthropic.claude-sonnet-4-5-20250929-v1:0': { input: 3, output: 15 },
-    // Haiku
-    'us.anthropic.claude-3-5-haiku-20241022-v1:0': { input: 0.80, output: 4 },
-};
-
-const DEFAULT_PRICING = { input: 3, output: 15 };
-
-interface CostSnapshot {
+interface TokenSnapshot {
     sessionInput: number;
     sessionOutput: number;
     totalInput: number;
     totalOutput: number;
-    sessionCost: number;
-    totalCost: number;
     lastUpdated: string;
 }
 
 /**
- * System-level cost tracker — tracks tokens and calculates USD cost.
+ * System-level token tracker — tracks input/output token counts.
  * Persists to costs.json in the block directory.
- * No model tokens wasted — this is pure system bookkeeping.
+ * No dollar estimates — providers report tokens natively and
+ * pricing varies too much across providers/regions to be reliable.
  */
 export class CostTracker {
-    private model: string;
-    private pricing: { input: number; output: number };
     private sessionInput = 0;
     private sessionOutput = 0;
     private totalInput = 0;
@@ -46,11 +26,8 @@ export class CostTracker {
     private lastTurnOutput = 0;
     private costFile: string;
 
-    constructor(blockPath: string, model: string) {
-        this.model = model;
+    constructor(blockPath: string, _model?: string) {
         this.costFile = join(blockPath, 'costs.json');
-        // Find pricing or use default
-        this.pricing = MODEL_PRICING[model] || DEFAULT_PRICING;
     }
 
     /** Load previous totals from costs.json. */
@@ -76,23 +53,6 @@ export class CostTracker {
         this.turnCount++;
     }
 
-    /** Get session cost in USD. */
-    getSessionCost(): number {
-        return (this.sessionInput / 1_000_000) * this.pricing.input +
-               (this.sessionOutput / 1_000_000) * this.pricing.output;
-    }
-
-    /** Get total cost in USD (all sessions). */
-    getTotalCost(): number {
-        return (this.totalInput / 1_000_000) * this.pricing.input +
-               (this.totalOutput / 1_000_000) * this.pricing.output;
-    }
-
-    /** Format cost for display. */
-    formatCost(cost: number): string {
-        return `$${cost.toFixed(4)}`;
-    }
-
     /** Get formatted session report. */
     getSessionReport(): string {
         return `${this.sessionInput.toLocaleString()} in / ${this.sessionOutput.toLocaleString()} out`;
@@ -114,14 +74,12 @@ export class CostTracker {
     }
 
     /** Get snapshot for display / persistence. */
-    getSnapshot(): CostSnapshot {
+    getSnapshot(): TokenSnapshot {
         return {
             sessionInput: this.sessionInput,
             sessionOutput: this.sessionOutput,
             totalInput: this.totalInput,
             totalOutput: this.totalOutput,
-            sessionCost: this.getSessionCost(),
-            totalCost: this.getTotalCost(),
             lastUpdated: new Date().toISOString(),
         };
     }
