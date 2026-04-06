@@ -286,7 +286,7 @@ export class ApiServer {
                         }
                         self.subscribers.get(msg.block)!.add(ws);
 
-                        // Send initial refresh tick
+                        // Send initial refresh signal
                         ws.send(JSON.stringify({ type: 'refresh' }));
                     }
                 } catch (err) {
