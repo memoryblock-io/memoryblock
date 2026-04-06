@@ -19,6 +19,7 @@ Thumbs.db
 # Project Specific
 genctx.config.json
 genctx.context.md
+PLAN.md
 _documentation
 _playground
 _study
