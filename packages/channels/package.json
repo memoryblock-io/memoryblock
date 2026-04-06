@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/channels",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "type": "module",
   "description": "Communication channel integrations for memoryblock.",
   "main": "./dist/index.js",

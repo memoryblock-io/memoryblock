@@ -96,6 +96,7 @@ export class CLIChannel implements Channel {
 
             process.stdout.write('\n');
             if (message.costReport) {
+                console.log('');
                 console.log(THEME.dim(`[${message.costReport}]`));
             }
             console.log('');
@@ -109,20 +110,29 @@ export class CLIChannel implements Channel {
     async requestApproval(request: ApprovalRequest): Promise<boolean> {
         return new Promise<boolean>((resolve) => {
             const rl = this.rl || createInterface({ input: process.stdin, output: process.stdout });
-            const prompt = `\n${chalk.yellow('⚠  ' + request.description)}\n   ${THEME.system('approve?')} (y/n): `;
 
-            rl.question(prompt, (answer: string) => {
-                const approved = answer.trim().toLowerCase() === 'y';
+            console.log('');
+            console.log(chalk.bgYellow.black(' ⚠ APPROVAL REQUIRED '));
+            console.log('');
+            console.log(`  ${chalk.bold(request.toolName)} ${THEME.dim('·')} ${THEME.dim(request.toolDescription || request.description)}`);
+            console.log(`  ${THEME.dim(`${request.blockName} · ${request.monitorName}`)}`);
+            console.log('');
+            console.log(`  ${chalk.yellow('A')} ${THEME.dim('or')} ${chalk.yellow('Enter')} ${THEME.dim('= approve')}  ·  ${chalk.yellow('D')} ${THEME.dim('= deny')}`);
+
+            rl.question('  ', (answer: string) => {
+                const lower = answer.trim().toLowerCase();
+                const approved = lower === 'a' || lower === 'approve' || lower === 'y' || answer.trim() === '';
+
+                moveCursor(process.stdout, 0, -1);
+                clearLine(process.stdout, 0);
                 if (approved) {
-                    console.log(chalk.green('  ✓ approved'));
+                    console.log(chalk.green(`  ✓ ${request.toolName} approved`));
                 } else {
-                    console.log(chalk.red('  ✗ denied'));
+                    console.log(chalk.red(`  ✗ ${request.toolName} denied`));
                 }
+                console.log('');
 
-                if (!this.rl) {
-                    rl.close();
-                }
-
+                if (!this.rl) rl.close();
                 resolve(approved);
             });
         });

@@ -77,7 +77,8 @@ export class WebChannel implements Channel {
                 role: msg.isSystem ? 'system' : 'assistant',
                 content: msg.content,
                 timestamp: msg.timestamp || new Date().toISOString(),
-                processed: true
+                processed: true,
+                ...(msg.costReport ? { costReport: msg.costReport } : {}),
             });
 
             await fsp.writeFile(this.chatFile, JSON.stringify(msgs, null, 4), 'utf8');
@@ -118,6 +119,7 @@ export class WebChannel implements Channel {
                 toolName: req.toolName,
                 toolInput: req.toolInput,
                 description: req.description,
+                toolDescription: req.toolDescription,
                 blockName: req.blockName,
                 monitorName: req.monitorName,
                 status: 'pending',
@@ -141,14 +143,8 @@ export class WebChannel implements Channel {
                 // API server not running — approval still works via file polling
             }
 
-            // 3. Notify the chat log so the user sees the request
-            await this.send({
-                blockName: req.blockName,
-                monitorName: req.monitorName,
-                content: `⚠️ **Approval Required**\n\n\`${req.toolName}\`: ${req.description}\n\n_Approve or deny via the Web UI or POST to /api/blocks/${this.blockName}/approve_`,
-                isSystem: true,
-                timestamp: new Date().toISOString(),
-            });
+            // 3. The CLI attacher and Web UI detect approval_request.json directly
+            //    No need to also write a system message to chat.json (avoids duplicate display)
 
             // 4. Poll for human decision (max 5 minutes)
             const TIMEOUT_MS = 5 * 60 * 1000;
