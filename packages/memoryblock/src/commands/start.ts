@@ -583,7 +583,7 @@ async function miniOnboarding(blockConfig: any, blockPath: string, blockName: st
                 execSync(`${installCmd} 2>&1`, { timeout: 120_000, stdio: 'ignore' });
                 installedSkills.push(skill);
                 p.log.success(`Successfully installed @memoryblock/plugin-${skill}`);
-            } catch (err) {
+            } catch {
                 p.log.warning(`Failed to auto-install "${skill}". Run \`${installCmd}\` manually.`);
             }
         }
