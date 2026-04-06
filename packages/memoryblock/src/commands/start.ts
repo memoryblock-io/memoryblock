@@ -179,9 +179,9 @@ async function attachCLIToRunningBlock(blockName: string, blockPath: string): Pr
 
     console.log(THEME.system('  ╭───────────────────────────────────────────────────╮'));
     console.log(THEME.system('  │') + ' attached to running instance '
-                                               + THEME.system('                     │'));
+        + THEME.system('                     │'));
     console.log(THEME.system('  │') + ' type a message and press enter. ctrl+c to detach. '
-                                                                    + THEME.system('│'));
+        + THEME.system('│'));
     console.log(THEME.system('  ╰───────────────────────────────────────────────────╯'));
     console.log('');
 
@@ -301,7 +301,7 @@ async function attachCLIToRunningBlock(blockName: string, blockPath: string): Pr
     });
 
     // Keep process alive
-    await new Promise<void>(() => {}); // Block forever until Ctrl+C
+    await new Promise<void>(() => { }); // Block forever until Ctrl+C
 }
 
 
@@ -475,7 +475,7 @@ async function findConfiguredBlocks(globalConfig: any, currentBlockName: string)
  */
 async function miniOnboarding(blockConfig: any, blockPath: string, blockName: string, auth: any, globalConfig: any): Promise<any> {
     console.log('');
-    log.banner();    
+    log.banner();
     p.intro(chalk.bold(`Block Setup — ${blockName}`));
     p.log.info('This block needs to be configured before it can start.');
 
@@ -566,7 +566,26 @@ async function miniOnboarding(blockConfig: any, blockPath: string, blockName: st
             await import(`@memoryblock/plugin-${skill}`);
             installedSkills.push(skill);
         } catch {
-            p.log.warning(`Plugin "${skill}" is not installed. Run \`mblk add ${skill}\` to install.`);
+            p.log.info(`Plugin "${skill}" not found globally. Auto-installing...`);
+            const { execSync } = await import('node:child_process');
+            let installCmd = `npm install -g @memoryblock/plugin-${skill}`;
+            const execPathStr = process.argv[1] || '';
+            
+            if (execPathStr.includes('.bun')) {
+                installCmd = `bun install -g @memoryblock/plugin-${skill}`;
+            } else if (execPathStr.includes('pnpm')) {
+                installCmd = `pnpm add -g @memoryblock/plugin-${skill}`;
+            } else if (execPathStr.includes('yarn')) {
+                installCmd = `yarn global add @memoryblock/plugin-${skill}`;
+            }
+            
+            try {
+                execSync(`${installCmd} 2>&1`, { timeout: 120_000, stdio: 'ignore' });
+                installedSkills.push(skill);
+                p.log.success(`Successfully installed @memoryblock/plugin-${skill}`);
+            } catch (err) {
+                p.log.warning(`Failed to auto-install "${skill}". Run \`${installCmd}\` manually.`);
+            }
         }
     }
 
@@ -665,7 +684,7 @@ export async function startCommand(blockName?: string, options?: { channel?: str
     }
 
     // Auto-install OS service hook quietly
-    import('./service.js').then(s => s.silentServiceInstall()).catch(() => {});
+    import('./service.js').then(s => s.silentServiceInstall()).catch(() => { });
 
     const globalConfig = await loadGlobalConfig();
     const blockPath = resolveBlockPath(globalConfig, blockName);
@@ -755,7 +774,7 @@ export async function startCommand(blockName?: string, options?: { channel?: str
     if (process.env.MBLK_IS_DAEMON === '1') {
         let shuttingDown = false;
         let monitor: any = null;
-        
+
         const shutdown = async () => {
             if (shuttingDown) return;
             shuttingDown = true;
@@ -817,7 +836,7 @@ export async function startCommand(blockName?: string, options?: { channel?: str
         });
         const daemon = await import(DAEMON_PKG);
         const pid = await daemon.spawnDaemon(blockConfig.name, channelType, blockPath);
-        
+
         if (options?.daemon) {
             log.brand(`${blockConfig.name}\n`);
             log.success(`Daemon spawned successfully! PID: ${pid}`);

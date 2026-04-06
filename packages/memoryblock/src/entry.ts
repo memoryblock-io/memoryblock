@@ -409,12 +409,40 @@ program
 
             console.log(`  Update available: ${chalk.dim(result.current)} → ${chalk.green(result.latest)}\n`);
 
-            // 2. Install the new version
-            console.log(chalk.dim('  Installing...'));
-            execSync('npm install -g memoryblock 2>&1', {
-                timeout: 120_000,
-                stdio: 'inherit',
-            });
+            // 2. Detect which package manager originally installed memoryblock
+            let installCmd = 'npm install -g memoryblock';
+            const execPathStr = process.argv[1] || '';
+
+            if (execPathStr.includes('.bun')) {
+                installCmd = 'bun install -g memoryblock';
+            } else if (execPathStr.includes('pnpm')) {
+                installCmd = 'pnpm add -g memoryblock';
+            } else if (execPathStr.includes('yarn')) {
+                installCmd = 'yarn global add memoryblock';
+            }
+
+            console.log(chalk.dim(`  Installing via ${installCmd.split(' ')[0]}...`));
+
+            try {
+                execSync(`${installCmd} 2>&1`, {
+                    timeout: 120_000,
+                    stdio: 'inherit',
+                });
+            } catch (installErr: any) {
+                const msg = installErr.message || String(installErr.stderr || '');
+                if (msg.includes('EACCES') || msg.includes('permission denied') || msg.includes('Permission denied')) {
+                    console.log('');
+                    log.error('Permission denied (EACCES) during global installation.');
+                    console.log(chalk.yellow('  Your system prohibits global writes as a standard user.'));
+                    console.log(chalk.white('  Fix: Configure a local npm prefix:\n'));
+                    console.log(chalk.cyan('    npm config set prefix ~/.npm-global'));
+                    console.log(chalk.cyan('    export PATH=~/.npm-global/bin:$PATH\n'));
+                    console.log(chalk.dim('  Or re-run with NVM or appropriate user scope.\n'));
+                    process.exit(1);
+                }
+                throw installErr;
+            }
+
             console.log(chalk.green('  ✓'), '  Package updated.\n');
 
             // 3. Graceful shutdown (blocks save memory/session/costs via SIGTERM)
