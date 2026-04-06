@@ -8,6 +8,10 @@ export { devTools } from './dev/index.js';
 export { identityTools } from './core/identity.js';
 export { channelTools } from './core/channels.js';
 export { systemTools } from './core/system.js';
+export { metricsTools } from './core/metrics.js';
+export { authTools } from './core/auth.js';
+export { configTools } from './core/config.js';
+export { cronTools } from './core/cron.js';
 
 import { ToolRegistry } from './registry.js';
 import { fsTools } from './fs/index.js';
@@ -17,6 +21,10 @@ import { devTools } from './dev/index.js';
 import { identityTools } from './core/identity.js';
 import { channelTools } from './core/channels.js';
 import { systemTools } from './core/system.js';
+import { metricsTools } from './core/metrics.js';
+import { authTools } from './core/auth.js';
+import { configTools } from './core/config.js';
+import { cronTools } from './core/cron.js';
 
 /**
  * Create a ToolRegistry pre-loaded with all built-in tools.
@@ -32,6 +40,10 @@ export function createDefaultRegistry(): ToolRegistry {
     for (const tool of identityTools) registry.register(tool);
     for (const tool of channelTools) registry.register(tool);
     for (const tool of systemTools) registry.register(tool);
+    for (const tool of metricsTools) registry.register(tool);
+    for (const tool of authTools) registry.register(tool);
+    for (const tool of configTools) registry.register(tool);
+    for (const tool of cronTools) registry.register(tool);
     
     return registry;
 }
