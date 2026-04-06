@@ -34,6 +34,7 @@ export { log } from './utils/logger.js';
 export { Monitor } from './engine/monitor.js';
 export { MemoryManager } from './engine/memory.js';
 export { Gatekeeper } from './engine/gatekeeper.js';
+export { PulseEngine } from './engine/pulse.js';
 export { Agent } from './engine/agent.js';
 export { FILE_TEMPLATES, SYSTEM_PROMPTS } from './engine/prompts.js';
 

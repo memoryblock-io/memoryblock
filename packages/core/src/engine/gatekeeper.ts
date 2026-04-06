@@ -24,6 +24,7 @@ export class Gatekeeper {
     async requestApproval(
         toolName: string,
         toolInput: Record<string, unknown>,
+        toolDescription?: string,
     ): Promise<boolean> {
         const description = this.formatDescription(toolName, toolInput);
 
@@ -31,6 +32,7 @@ export class Gatekeeper {
             toolName,
             toolInput,
             description,
+            toolDescription,
             blockName: this.blockName,
             monitorName: this.monitorName,
         };

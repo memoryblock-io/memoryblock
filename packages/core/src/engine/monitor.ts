@@ -2,11 +2,12 @@ import type {
     LLMAdapter, LLMMessage, ToolDefinition, Channel, BlockConfig, ChannelMessage,
     IToolRegistry,
 } from '@memoryblock/types';
+import { PulseEngine } from './pulse.js';
 import { MemoryManager } from './memory.js';
 import { Gatekeeper } from './gatekeeper.js';
 import { ConversationLogger } from './conversation-log.js';
 import { CostTracker } from './cost-tracker.js';
-import { savePulseState, saveBlockConfig, loadGlobalConfig, resolveBlocksDir, getWsRoot } from '../utils/config.js';
+import { savePulseState, loadPulseState, saveBlockConfig, loadGlobalConfig, resolveBlocksDir, getWsRoot } from '../utils/config.js';
 import { ensureDir, pathExists } from '../utils/fs.js';
 import { log } from '../utils/logger.js';
 import { t } from '@memoryblock/locale';
@@ -59,8 +60,7 @@ export class Monitor {
     private blockConfig: BlockConfig;
     private adapter: LLMAdapter;
     private registry: IToolRegistry;
-    private cronTimer: NodeJS.Timeout | null = null;
-    private _lastCronMinute = -1;
+    private pulse: PulseEngine;
 
     constructor(options: {
         blockPath: string;
@@ -88,6 +88,7 @@ export class Monitor {
         );
         this.logger = new ConversationLogger(options.blockPath);
         this.costTracker = new CostTracker(options.blockPath, options.blockConfig.adapter.model);
+        this.pulse = new PulseEngine(options.blockPath, options.blockConfig);
     }
 
     async start(): Promise<void> {
@@ -97,7 +98,10 @@ export class Monitor {
         // Load previous token totals
         await this.costTracker.load();
 
+        // Preserve existing pulse instructions across restart
+        const existingPulse = await loadPulseState(blockPath);
         await savePulseState(blockPath, {
+            ...existingPulse,
             status: 'ACTIVE',
             lastRun: new Date().toISOString(),
             nextWakeUp: null,
@@ -133,14 +137,16 @@ export class Monitor {
 
         await this.channel.start();
 
-        // Start internal tick for cron polling (runs every 10 seconds, checks minute match)
-        this.cronTimer = setInterval(() => this.tick(), 10000);
-        this.tick();
+        // Start pulse engine (autonomic background tasks)
+        this.pulse.onAlert(async (message: string) => {
+            await this.handleUserMessage(message);
+        });
+        await this.pulse.start();
     }
 
     async stop(): Promise<void> {
         this.running = false;
-        if (this.cronTimer) clearInterval(this.cronTimer);
+        this.pulse.stop();
 
         // Save smart memory summary before shutdown
         await this.saveSmartMemory();
@@ -149,7 +155,7 @@ export class Monitor {
         await this.costTracker.save();
 
         await this.logger.close();
-        await this.channel.stop();
+
         // Only write SLEEPING state if we still own the lock
         let isSuperseded = false;
         try {
@@ -158,7 +164,9 @@ export class Monitor {
         } catch { /* proceed if no lock */ }
 
         if (!isSuperseded) {
+            const existingPulse2 = await loadPulseState(this.blockPath);
             await savePulseState(this.blockPath, {
+                ...existingPulse2,
                 status: 'SLEEPING',
                 lastRun: new Date().toISOString(),
                 nextWakeUp: null,
@@ -173,50 +181,22 @@ export class Monitor {
         log.monitor(this.blockConfig.name, this.monitorName, t.monitor.goingToSleep);
         log.dim(`  ${t.monitor.currentSession}: ${sessionReport}`);
         log.dim(`  ${t.monitor.completeSession}: ${totalReport}`);
+
+        // Send session summary through channel for attached clients BEFORE closing
+        const summaryMsg = `\n💤 ${t.monitor.goingToSleep}\n\n${t.monitor.currentSession}: ${sessionReport}\n${t.monitor.completeSession}: ${totalReport}`;
+        await this.channel.send({
+            blockName: this.blockConfig.name,
+            monitorName: this.monitorName,
+            content: summaryMsg,
+            isSystem: true,
+            timestamp: new Date().toISOString(),
+        });
+
+        // Stop channel AFTER sending summary
+        await this.channel.stop();
     }
 
-    private async tick(): Promise<void> {
-        if (!this.running) return;
-        try {
-            const cronsPath = join(getWsRoot(), 'crons.json');
-            const data = await fsp.readFile(cronsPath, 'utf8').catch(() => '{}');
-            const crons = JSON.parse(data);
-            
-            const now = new Date();
-            const currentMinute = now.getMinutes();
-            if (this._lastCronMinute === currentMinute) return;
-            this._lastCronMinute = currentMinute;
 
-            for (const [name, job] of Object.entries(crons)) {
-                const j = job as any;
-                if (j.target === this.blockConfig.name) {
-                    const matchPattern = (val: string, current: number) => {
-                        if (val === '*') return true;
-                        if (val.includes('/')) {
-                            const step = parseInt(val.split('/')[1], 10);
-                            return current % step === 0;
-                        }
-                        return parseInt(val, 10) === current;
-                    };
-                    const parts = j.cron_expression.split(' ');
-                    if (parts.length !== 5) continue;
-                    const [min, hour, dom, mon, dow] = parts;
-                    
-                    const isMatch = matchPattern(min, now.getMinutes()) &&
-                                  matchPattern(hour, now.getHours()) &&
-                                  matchPattern(dom, now.getDate()) &&
-                                  matchPattern(mon, now.getMonth() + 1) &&
-                                  matchPattern(dow, now.getDay());
-
-                    if (isMatch) {
-                        log.system(this.blockConfig.name, `Cron event triggered: ${name}`);
-                        // Invoke non-blocking self-directed message
-                        this.handleUserMessage(`Timer elapsed: [${name}]\nInstruction: ${j.instruction}`);
-                    }
-                }
-            }
-        } catch { /* ignore */ }
-    }
 
     private async handleUserMessage(content: string, sourceChannel?: string): Promise<void> {
         this.logger.logUser(content, {
@@ -294,6 +274,7 @@ export class Monitor {
 
     private async runConversationLoop(sourceChannel?: string): Promise<void> {
         const { adapter, blockConfig, blockPath } = this;
+        const toolsUsedThisTurn: string[] = [];
 
         while (this.running) {
             const tools = this.getToolDefinitions();
@@ -310,7 +291,10 @@ export class Monitor {
             this.messages.push(response.message);
 
             if (response.stopReason === 'tool_use' && response.message.toolCalls) {
-                // Log tool calls compactly in a single dim line
+                // Accumulate tool names for post-response footer
+                for (const tc of response.message.toolCalls) {
+                    toolsUsedThisTurn.push(`[${tc.name}]`);
+                }
                 const toolNames = response.message.toolCalls.map(tc => `[${tc.name}]`).join(' ');
                 log.system(blockConfig.name, `\nTOOLS: ${toolNames}`);
 
@@ -336,6 +320,17 @@ export class Monitor {
             if (response.message.content) {
                 // Send response (token info passed as metadata)
                 await this.sendToChannel(response.message.content, sourceChannel, this.costTracker.getPerTurnReport());
+            }
+
+            // Send accumulated tool usage as a compact footer after the response
+            if (toolsUsedThisTurn.length > 0) {
+                await this.channel.send({
+                    blockName: this.blockConfig.name,
+                    monitorName: this.monitorName,
+                    content: `⚙️ TOOLS: ${toolsUsedThisTurn.join(' ')}`,
+                    isSystem: true,
+                    timestamp: new Date().toISOString(),
+                });
             }
 
             // Trim history AFTER sending response — keeps API messages lean
@@ -465,10 +460,12 @@ export class Monitor {
             await savePulseState(blockPath, {
                 status: 'SLEEPING',
                 lastRun: new Date().toISOString(),
+                lastPulse: null,
                 nextWakeUp: null,
                 currentTask: null,
-                error: null
-            } as any);
+                error: null,
+                instructions: [],
+            });
 
             await fsp.writeFile(join(blockPath, 'memory.md'), `# ${name}\n\n(no memory yet)`, 'utf8');
             await fsp.writeFile(join(blockPath, 'monitor.md'), `You are an AI assistant in the block: ${name}.`, 'utf8');
@@ -629,14 +626,14 @@ export class Monitor {
                     const cmd = (tc.input as Record<string, string>).command || '';
                     const isSafe = SAFE_PREFIXES.some((p) => cmd.trim().startsWith(p));
                     if (!isSafe) {
-                        const approved = await this.gatekeeper.requestApproval(tc.name, tc.input);
+                        const approved = await this.gatekeeper.requestApproval(tc.name, tc.input, toolDef?.description);
                         if (!approved) {
                             results.push({ toolCallId: tc.id, name: tc.name, content: 'Action denied by user.', isError: true });
                             continue;
                         }
                     }
                 } else if (toolDef?.requiresApproval) {
-                    const approved = await this.gatekeeper.requestApproval(tc.name, tc.input);
+                    const approved = await this.gatekeeper.requestApproval(tc.name, tc.input, toolDef?.description);
                     if (!approved) {
                         results.push({ toolCallId: tc.id, name: tc.name, content: 'Action denied by user.', isError: true });
                         continue;
