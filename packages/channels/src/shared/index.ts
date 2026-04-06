@@ -2,8 +2,8 @@ import { promises as fsp, watch, type FSWatcher } from 'node:fs';
 import { join } from 'node:path';
 import type { Channel, ChannelMessage, ApprovalRequest } from '../base.js';
 
-export class WebChannel implements Channel {
-    readonly name = 'web';
+export class SharedChannel implements Channel {
+    readonly name = 'shared';
     private blockPath: string;
     private chatFile: string;
     private onMessageHandler: ((message: ChannelMessage) => void) | null = null;
@@ -13,6 +13,7 @@ export class WebChannel implements Channel {
     private activeTimers = new Set<NodeJS.Timeout>();
     private pollInterval: NodeJS.Timeout | null = null;
     private isProcessing = false;
+    private isStreamingActive = false;
 
     constructor(private blockName: string, private basePath: string) {
         this.blockPath = basePath;
@@ -83,12 +84,26 @@ export class WebChannel implements Channel {
 
             await fsp.writeFile(this.chatFile, JSON.stringify(msgs, null, 4), 'utf8');
         }).catch(err => {
-            console.error('[WebChannel] Failed to write out message:', err);
+            console.error('[SharedChannel] Failed to write out message:', err);
         });
         await this.pendingWrite;
+        
+        // Reset streaming flag so the next output overwrites rather than appends
+        this.isStreamingActive = false;
     }
 
     async streamChunk(chunk: string): Promise<void> {
+        // Write locally for attached thin clients to tail
+        try {
+            if (!this.isStreamingActive) {
+                await fsp.writeFile(join(this.blockPath, '.stream'), chunk, 'utf8');
+                this.isStreamingActive = true;
+            } else {
+                await fsp.appendFile(join(this.blockPath, '.stream'), chunk, 'utf8');
+            }
+        } catch { /* ignore append error */ }
+
+        // Broadcast to WebSocket clients if API server is running
         try {
             const port = process.env.MBLK_PORT || 8420;
             await fetch(`http://127.0.0.1:${port}/api/blocks/${this.blockName}/stream`, {
@@ -185,7 +200,7 @@ export class WebChannel implements Channel {
             return false;
 
         } catch (err) {
-            console.error('[WebChannel] Approval system error:', err);
+            console.error('[SharedChannel] Approval system error:', err);
             return false;
         }
     }
@@ -220,7 +235,7 @@ export class WebChannel implements Channel {
                 }
             }, 2000);
         } catch (err: unknown) {
-            console.warn(`[WebChannel] Unable to start watching ${this.blockPath}: ${(err as Error).message}`);
+            console.warn(`[SharedChannel] Unable to start watching ${this.blockPath}: ${(err as Error).message}`);
         }
     }
 

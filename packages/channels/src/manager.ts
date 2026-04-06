@@ -8,12 +8,15 @@ import type { Channel, ChannelMessage, ApprovalRequest } from '@memoryblock/type
 export class MultiChannelManager implements Channel {
     readonly name = 'multi';
     private channels: Map<string, Channel> = new Map();
-    private lastActiveChannel: string = 'cli'; // default to CLI for autonomous actions
+    private lastActiveChannel: string = 'shared'; // Initial default, updates dynamically on message
     private messageHandler: ((message: ChannelMessage) => void) | null = null;
 
     constructor(initialChannels: Channel[]) {
         for (const ch of initialChannels) {
             this.channels.set(ch.name, ch);
+        }
+        if (initialChannels.length > 0) {
+            this.lastActiveChannel = initialChannels[0].name;
         }
     }
 

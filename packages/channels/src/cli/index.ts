@@ -27,6 +27,9 @@ export class CLIChannel implements Channel {
     private messageHandler: ((message: ChannelMessage) => void) | null = null;
     private blockName: string;
 
+    private lastSpeakerName: string | null = null;
+    private isStreaming = false;
+
     constructor(blockName: string) {
         this.blockName = blockName;
     }
@@ -45,62 +48,98 @@ export class CLIChannel implements Channel {
     }
 
     async send(message: ChannelMessage): Promise<void> {
+        const name = message.monitorName || message.blockName;
+
         if (message.isSystem) {
+            // If the system message is from a monitor (e.g., tools), we should print the monitor header
+            // so it doesn't look like it belongs to the previous speaker (Founder)
+            if (name !== 'system' && this.lastSpeakerName !== name) {
+                console.log('');
+                const header = `${THEME.brandBg(` ${name} `)}${name !== message.blockName ? ` ${THEME.system(message.blockName)}` : ''}`;
+                console.log(header);
+                this.lastSpeakerName = name;
+            } else if (this.lastSpeakerName === name) {
+                // If it's a subsequent system message by the same monitor, don't add full spacing
+            } else {
+                console.log('');
+            }
+
             // System messages: ultra-dim, compact
             console.log(THEME.system(`  │  ${message.content.replace(/\n/g, '\n  │  ')}`));
+            // Do NOT reset lastSpeakerName if this was a monitor message (like a tool execution),
+            // so that if the monitor types its normal un-systemed response next, it doesn't print a duplicate header.
+            if (name === 'system') {
+                this.lastSpeakerName = null; 
+            }
         } else {
-            // Monitor response
-            console.log('');
-            
             // Compact header: monitor name is the highlight, block name is secondary
-            const name = message.monitorName || message.blockName;
-            const header = `${THEME.brandBg(` ${name} `)}${name !== message.blockName ? ` ${THEME.system(message.blockName)}` : ''}`;
-            console.log(header);
-            console.log('');
-            console.log('');
+            if (this.lastSpeakerName !== name) {
+                console.log('');
+                const header = `${THEME.brandBg(` ${name} `)}${name !== message.blockName ? ` ${THEME.system(message.blockName)}` : ''}`;
+                console.log(header);
+                console.log('');
+                this.lastSpeakerName = name;
+            } else if (!this.isStreaming) {
+                // Same speaker but distinct message segment, add slight spacing
+                console.log('');
+            }
 
             const formatted = this.formatContent(message.content);
             const columns = process.stdout.columns || 80;
             const maxWidth = columns - 2;
 
-            // Word wrap + streaming
-            let currentLineLength = 0;
-            const words = formatted.split(/(\s+)/);
+            if (!this.isStreaming && formatted.trim() !== '') {
+                // Word wrap logic for non-streaming full responses (like tools message)
+                let currentLineLength = 0;
+                const words = formatted.split(/(\s+)/);
 
-            // eslint-disable-next-line no-control-regex
-            const getVisualLength = (str: string) => str.replace(/\u001b\[[0-9;]*m/g, '').length;
+                // eslint-disable-next-line no-control-regex
+                const getVisualLength = (str: string) => str.replace(/\u001b\[[0-9;]*m/g, '').length;
 
-            for (const word of words) {
-                if (word.includes('\n')) {
+                for (const word of words) {
+                    if (word.includes('\n')) {
+                        process.stdout.write(word);
+                        const lines = word.split('\n');
+                        currentLineLength = getVisualLength(lines[lines.length - 1]);
+                        continue;
+                    }
+
+                    const visualWordLength = getVisualLength(word);
+                    if (currentLineLength + visualWordLength > maxWidth && currentLineLength > 0) {
+                        process.stdout.write('\n');
+                        currentLineLength = 0;
+                        if (/^\s+$/.test(word)) continue;
+                    }
+
                     process.stdout.write(word);
-                    const lines = word.split('\n');
-                    currentLineLength = getVisualLength(lines[lines.length - 1]);
-                    continue;
+                    currentLineLength += visualWordLength;
                 }
-
-                const visualWordLength = getVisualLength(word);
-                if (currentLineLength + visualWordLength > maxWidth && currentLineLength > 0) {
-                    process.stdout.write('\n');
-                    currentLineLength = 0;
-                    if (/^\s+$/.test(word)) continue;
-                }
-
-                process.stdout.write(word);
-                currentLineLength += visualWordLength;
-
-                // Streaming delay
-                if (visualWordLength > 0 && !/^\s+$/.test(word)) {
-                    await this.sleep(5 + Math.random() * 10);
-                }
+                process.stdout.write('\n');
+            } else if (!this.isStreaming) {
+                // The message might have just been empty or a pure stream finalize
+                process.stdout.write('\n');
+            } else {
+                // We just finished streaming, so the text is fully printed on screen already! 
+                // Let's cap off the end of the streaming line so costReport prints neatly
+                process.stdout.write('\n');
             }
 
-            process.stdout.write('\n');
             if (message.costReport) {
-                console.log('');
                 console.log(THEME.dim(`[${message.costReport}]`));
+                this.lastSpeakerName = null; // Cost report closes the turn
             }
+            this.isStreaming = false; // reset stream state
             console.log('');
         }
+    }
+
+    async streamChunk(chunk: string): Promise<void> {
+        if (!this.isStreaming) {
+            this.isStreaming = true;
+            // The header will be printed by the preceding tool message or the next complete send 
+            // but if stream starts and we don't have a header, we just start streaming.
+        }
+        process.stdout.write(chalk.white(chunk));
     }
 
     onMessage(handler: (message: ChannelMessage) => void): void {
@@ -160,6 +199,7 @@ export class CLIChannel implements Channel {
             moveCursor(process.stdout, 0, -1);
             clearLine(process.stdout, 0);
             console.log(`\n${THEME.founderBg(' Founder ')} ${content}`);
+            this.lastSpeakerName = 'user';
 
             if (this.messageHandler) {
                 this.messageHandler({
