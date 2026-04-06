@@ -63,6 +63,7 @@ async function stopBlock(globalConfig: GlobalConfig, name: string, options?: { p
   }
 
   await savePulseState(blockPath, {
+    ...pulse,
     status: 'SLEEPING',
     lastRun: new Date().toISOString(),
     nextWakeUp: null,
