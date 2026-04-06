@@ -79,13 +79,29 @@ export const GlobalConfigSchema = z.object({
     }).default({}),
 });
 
+// ===== Pulse Instruction =====
+export const PulseInstructionSchema = z.object({
+    id: z.string(),
+    type: z.enum(['script', 'alert', 'cron', 'log', 'webhook']),
+    instruction: z.string(),
+    interval: z.number().optional(),
+    cronExpression: z.string().optional(),
+    expiresAt: z.string().nullable().default(null),
+    alertMonitor: z.boolean().default(false),
+    condition: z.string().optional(),
+    lastExecuted: z.string().nullable().default(null),
+    createdAt: z.string(),
+});
+
 // ===== Pulse State =====
 export const PulseStateSchema = z.object({
     status: z.enum(['SLEEPING', 'ACTIVE', 'BUSY', 'ERROR']).default('SLEEPING'),
     lastRun: z.string().nullable().default(null),
+    lastPulse: z.string().nullable().default(null),
     nextWakeUp: z.string().nullable().default(null),
     currentTask: z.string().nullable().default(null),
     error: z.string().nullable().default(null),
+    instructions: z.array(PulseInstructionSchema).default([]),
 });
 
 // ===== Auth =====

@@ -1,12 +1,38 @@
 // ===== Block State =====
 export type BlockStatus = 'SLEEPING' | 'ACTIVE' | 'BUSY' | 'ERROR';
 
+/** A single autonomous pulse instruction — executes without waking the LLM unless alertMonitor is true. */
+export type PulseInstructionType = 'script' | 'alert' | 'cron' | 'log' | 'webhook';
+
+export interface PulseInstruction {
+    id: string;
+    type: PulseInstructionType;
+    /** The instruction body: shell command (script), message (log/alert), URL (webhook), or LLM prompt (cron/alert). */
+    instruction: string;
+    /** Interval in seconds between executions (for script/alert/log/webhook types). */
+    interval?: number;
+    /** Cron expression (for cron type only). */
+    cronExpression?: string;
+    /** ISO timestamp after which this instruction is auto-cleaned. null = never expires. */
+    expiresAt: string | null;
+    /** If true, sends the result to the monitor (costs tokens). If false, runs silently. */
+    alertMonitor: boolean;
+    /** Optional condition expression for alert type (e.g., "memory_percent > 90"). */
+    condition?: string;
+    /** ISO timestamp of last execution. */
+    lastExecuted: string | null;
+    /** ISO timestamp of creation. */
+    createdAt: string;
+}
+
 export interface PulseState {
     status: BlockStatus;
     lastRun: string | null;
+    lastPulse: string | null;
     nextWakeUp: string | null;
     currentTask: string | null;
     error: string | null;
+    instructions: PulseInstruction[];
 }
 
 // ===== Configuration =====
@@ -185,6 +211,7 @@ export interface ApprovalRequest {
     toolName: string;
     toolInput: Record<string, unknown>;
     description: string;
+    toolDescription?: string;
     blockName: string;
     monitorName: string;
 }
