@@ -38,3 +38,4 @@ fix_lint.js
 test-agents.ts
 test_bun_server.js
 *.pem
+ANALYSIS.md
