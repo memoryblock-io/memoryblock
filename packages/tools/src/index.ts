@@ -11,7 +11,7 @@ export { systemTools } from './core/system.js';
 export { metricsTools } from './core/metrics.js';
 export { authTools } from './core/auth.js';
 export { configTools } from './core/config.js';
-export { cronTools } from './core/cron.js';
+export { pulseTools, cronTools } from './core/pulse.js';
 
 import { ToolRegistry } from './registry.js';
 import { fsTools } from './fs/index.js';
@@ -24,7 +24,7 @@ import { systemTools } from './core/system.js';
 import { metricsTools } from './core/metrics.js';
 import { authTools } from './core/auth.js';
 import { configTools } from './core/config.js';
-import { cronTools } from './core/cron.js';
+import { pulseTools, cronTools } from './core/pulse.js';
 
 /**
  * Create a ToolRegistry pre-loaded with all built-in tools.
@@ -43,6 +43,9 @@ export function createDefaultRegistry(): ToolRegistry {
     for (const tool of metricsTools) registry.register(tool);
     for (const tool of authTools) registry.register(tool);
     for (const tool of configTools) registry.register(tool);
+    // Pulse: autonomic scheduling (replaces legacy cron)
+    for (const tool of pulseTools) registry.register(tool);
+    // Legacy cron wrappers (backward compat — delegates to pulse)
     for (const tool of cronTools) registry.register(tool);
     
     return registry;
