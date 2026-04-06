@@ -7,7 +7,7 @@
   
   <!-- ONE LINE SUMMARY -->
   <p>
-    <b>Run AI agents that remember, think, and work - without burning through your budget.</b>
+    <b>The lightweight agent OS. Isolated AI workspaces that remember, think, and run — on your machine.</b>
   </p>
   
   <!-- BADGES -->
@@ -37,82 +37,179 @@
 
 </div>
 
-`memoryblock` is a lightweight framework for running isolated AI agents as local background workers. Instead of building monolithic chatbots, you provision dedicated workspaces called **blocks**, each with its own memory, tools, and execution loop.
+`memoryblock` is a lightweight framework for running isolated AI workspaces as local background workers. Instead of spinning up monolithic chatbots, you provision dedicated workspaces called **blocks** — each with its own monitor, memory, tools, and execution loop.
 
-Spin up a devops block to monitor your servers, a research block to scrape web data, and a home block to coordinate everything. They run independently - no shared state, no crossed wires.
+A devops block watches your servers. A research block scrapes and summarizes data. A home block coordinates everything. They run independently — no shared state, no crossed wires.
 
-**Why memoryblock?**
+## Terminology
 
-- **Persistent Memory** — Agents remember context across sessions. No repeated prompts.
-- **Cost-Efficient** — Token pruning and lazy tool loading typically halve inference costs.
-- **Portable** — Each block is a folder. Copy it to move an agent to a new machine.
-- **Model Agnostic** — Native support for OpenAI, Anthropic, AWS Bedrock, and Google Gemini.
-- **Cross-Platform** — Works everywhere - macOS, Linux, or Windows. Runs on Node.js ≥ 20 and Bun.
+Memoryblock uses specific terms that mean different things than the typical AI landscape. Understanding these will help you navigate the system:
+
+| Term | What it is | Has its own |
+|:---|:---|:---|
+| **Founder** | You — the human user. Your profile lives in `founder.md` and is shared across all blocks so every monitor knows who it's working for. | Profile, preferences |
+| **Block** | An isolated workspace. Think of it as a container for an AI personality — its own directory with config, memory, logs, and tools. | Memory, config, permissions, logs, cron jobs |
+| **Monitor** | The intelligence inside a block. This is what other platforms call an "AI agent." Each monitor has a name, emoji, personality, and its own conversation loop. | Identity, personality, tool access, conversation history |
+| **Agent** | A sub-process spawned by a monitor for a specific task. Agents are ephemeral — they run, report back, and get terminated. Only monitors can create them. | Isolated workspace, limited tools, inbox |
+
+```
+Founder (you)
+└── Block: home
+    └── Monitor: 🤖 Nova  ← the AI running inside this block
+        ├── Agent: "research"  ← temporary sub-task worker
+        └── Agent: "writer"   ← another temporary worker
+```
+
+Monitors are persistent — they remember everything across sessions. Agents are disposable — they exist only for the task that spawned them.
+
+## Why Memoryblock?
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 🏗️ Block Architecture
+Each block is an isolated workspace — its own memory, config, tools, and logs. Like containers, but for AI. Copy a folder to move a monitor to another machine.
+
+### ⚡ Lightweight & Fast
+No Docker. No Python runtime. No heavy dependencies. Ships as a single npm package, boots instantly on Bun or Node.js. Runs on a $5 VPS as comfortably as a MacBook Pro.
+
+### 🧠 Persistent Memory
+Monitors remember context across sessions via smart memory summarization. No repeated prompts, no lost context. Sessions auto-resume on crash recovery.
+
+</td>
+<td width="50%" valign="top">
+
+### 📡 Multi-Channel Sync
+Start a conversation on CLI, continue it on the web dashboard, pick it up on Telegram — the same monitor, the same context, seamlessly.
+
+### 🛡️ Safe by Default
+Blocks are sandboxed. Dangerous commands pause for human approval. Safe commands auto-execute. Elevate to Superblock only when needed.
+
+### 🔌 Model Agnostic
+Native adapters for OpenAI, Anthropic, Google Gemini, and AWS Bedrock. Connect the model that fits your task.
+
+</td>
+</tr>
+</table>
 
 ## Get Started in 60 Seconds
 
 ```bash
 npm install -g memoryblock   # or: bun install -g memoryblock
 mblk init                    # guided setup — pick your LLM provider
-mblk start home              # your first agent is now running
+mblk start home              # your first monitor is running
 ```
 
-That's it. You have a running AI agent with persistent memory, file access, and a web dashboard.
+That's it. You have a running monitor with persistent memory, file access, and a web dashboard.
 
-> **Bun users:** `mblk` automatically uses Bun when available for ~2x faster startup. Runs perfectly on Node.js too.
+> **Bun users:** When available, `mblk` automatically uses Bun for ~2x faster startup. Works perfectly on Node.js too.
 
-## Talk to Your Agent
+## Talk to Your Monitor
 
-Blocks are decoupled from the UI. Use whatever interface fits:
+Blocks are decoupled from the interface. Use whatever channel fits your workflow:
 
 ```bash
 mblk start home                     # interactive CLI chat
+mblk start home -d                  # background daemon mode
 mblk start home --channel telegram  # route to Telegram
 mblk web                            # web dashboard at localhost:8420
 ```
 
-The web dashboard gives you real-time streaming, cost tracking, memory inspection, and block management — all in one place.
+<!-- IMAGE: Screenshot collage showing the same conversation flowing across three interfaces — CLI terminal on the left, web dashboard in the center, Telegram chat on the right — with the same agent name/emoji and message thread visible in all three. Caption: "One agent. Three interfaces. Same conversation." -->
 
-## What Can Your Agents Do?
+## Built-In Tools
 
-Every block ships with **22+ built-in tools** — no plugins required:
+Every block ships with **30+ built-in tools** — no plugins required:
 
-| Category | Tools | Available to |
-|:---|:---|:---|
-| **Files** | `read_file` · `write_file` · `append_to_file` · `replace_in_file` · `copy_file` · `move_file` · `delete_file` · `create_directory` · `file_info` · `list_directory` · `search_files` · `find_files` | All blocks |
-| **Shell** | `execute_command` · `run_lint` · `run_build` · `run_test` | Superblocks |
-| **Identity** | `update_monitor_identity` · `update_founder_info` · `send_channel_message` | All blocks |
-| **System** | `system_info` · `get_current_time` · `list_blocks` | All / Superblocks |
+| Category | Tools |
+|:---|:---|
+| **Files** | `read_file` · `write_file` · `replace_in_file` · `append_to_file` · `copy_file` · `move_file` · `delete_file` · `create_directory` · `list_directory` · `search_files` · `find_files` · `file_info` |
+| **Shell** | `execute_command` · `run_lint` · `run_build` · `run_test` |
+| **Agents** | `create_agent` · `query_agent` · `message_agent` · `list_agents` · `terminate_agent` |
+| **Scheduling** | `schedule_cron_job` · `list_cron_jobs` · `remove_cron_job` |
+| **Identity** | `update_monitor_identity` · `update_founder_info` · `send_channel_message` |
+| **System** | `system_info` · `get_current_time` · `list_blocks` · `get_token_usage` |
+| **Config** | `auth_read` · `auth_write` · `list_auth_providers` · `update_block_config` |
 
-### Need more? Add plugins:
+### Extend with Plugins
 
 ```bash
 mblk add web-search     # SERP querying via Brave Search
 mblk add fetch-webpage  # Extract and chunk web page content
-mblk add agents         # Let blocks spawn ephemeral sub-agents
+mblk add agents         # Sub-agent orchestration
+mblk add aws            # AWS service tools
 ```
 
-## Permissions
+Plugins auto-install if missing — when you create a block and select capabilities, memoryblock installs what's needed.
 
-Blocks are sandboxed by default. Each block only accesses its own directory.
+## Token Efficiency
+
+Memoryblock is designed from the ground up to minimize token consumption:
+
+| Optimization | How it works |
+|:---|:---|
+| **Lazy tool loading** | Tools are only sent to the LLM after the monitor discovers them — saves ~2,500 tokens per turn |
+| **Tool result trimming** | Large outputs (file contents, command results) are automatically truncated in conversation history |
+| **Smart memory compaction** | When context grows large, the monitor summarizes key info and resets — no redundant history |
+| **Session state recovery** | Conversations persist to disk so you never re-explain context after a restart |
+| **Discovery → Use → Compact cycle** | Full tool schemas sent once, then compacted to a reminder for all subsequent turns |
+
+<!-- IMAGE: Simple horizontal bar chart comparing "Tokens per turn" across approaches: "Naive (all tools every turn)" at ~6000 tokens, "Memoryblock (lazy + compact)" at ~2000 tokens. Clean, minimal design with memoryblock's purple accent color. Caption: "~3x fewer tokens per turn compared to always-on tool injection." -->
+
+## Monitor → Agent Orchestration
+
+Monitors can spawn agents for parallel work:
+
+```
+Monitor: 🤖 Nova (home block)
+├── create_agent("research", "Find pricing for competitor X")
+├── create_agent("writer", "Draft the comparison doc")
+├── query_agent("research")  → gets results
+├── message_agent("writer", "Here's the data from research...")
+└── terminate_agent("research")  → cleanup
+```
+
+Agents run in the block's `agents/` directory with their own isolated context. The monitor can message them asynchronously without blocking its own conversation. Agents are ephemeral — they can't create other agents, and they have a limited tool set compared to the monitor.
+
+## Background & Scheduling
+
+Run blocks as background daemons with built-in cron scheduling:
+
+```bash
+mblk start ops-monitor -d          # daemon mode
+mblk service install                # auto-start on boot (launchd / systemd)
+```
+
+Your monitor can schedule its own tasks:
+
+```
+"Schedule a cron job: check server health every hour"
+→ schedule_cron_job("health-check", "0 * * * *", "Run uptime check on production servers")
+```
+
+The Monitor's background tick loop automatically triggers scheduled jobs.
+
+## Permissions & Security
+
+Blocks are sandboxed by default. Elevate only when needed.
 
 | | Block *(default)* | Superblock |
 |:---|:---:|:---:|
 | Read/write own files | ✅ | ✅ |
 | Identity & communication tools | ✅ | ✅ |
-| System info & time | ✅ | ✅ |
 | Shell commands | ❌ | ✅ |
 | Files outside block directory | ❌ | ✅ |
 | Cross-block visibility | ❌ | ✅ |
 
-Elevate a block when it needs more power:
-
 ```bash
-mblk superblock ops-monitor       # unrestricted access
-mblk superblock ops-monitor --off  # back to sandboxed
+mblk superblock ops-monitor        # grant full access
+mblk superblock ops-monitor --off  # revoke
 ```
 
-**Tool approval:** Dangerous commands pause and ask for your confirmation right in the chat. Safe commands (`ls`, `grep`, `git status`, `npm run build`, etc.) run automatically.
+**Interactive tool approval:** When a monitor tries to run a command, you see exactly what it wants to execute and approve or deny — in the CLI, web dashboard, or Telegram.
+
+<!-- IMAGE: Screenshot of the CLI showing a tool approval prompt — the agent wants to run `rm -rf ./dist && npm run build`, displayed with the command highlighted, and a [y/n] prompt waiting for the user. Clean terminal with purple accents. Caption: "Every dangerous command requires explicit human approval." -->
 
 ## Commands
 
@@ -120,12 +217,12 @@ mblk superblock ops-monitor --off  # back to sandboxed
 |:---|:---|
 | `mblk init` | Guided setup wizard |
 | `mblk create <name>` | Create a new block |
-| `mblk start [block]` | Start a block (or all blocks) |
+| `mblk start [block]` | Start block(s) — interactive or `-d` for daemon |
 | `mblk stop [block]` | Stop a block (or all blocks) |
 | `mblk status` | See all blocks and their state |
 | `mblk config [target]` | Edit config: `auth`, `<block>`, or global |
 | `mblk superblock <block>` | Grant/revoke full system access |
-| `mblk update` | Full system update and restart |
+| `mblk update` | Update and restart all services |
 | `mblk web` | Open the web dashboard |
 | `mblk add / remove <plugin>` | Manage plugins |
 | `mblk delete <block>` | Archive (or `--hard` delete) a block |
@@ -134,11 +231,11 @@ mblk superblock ops-monitor --off  # back to sandboxed
 | `mblk shutdown` | Stop everything |
 
 <details>
-<summary><b>All server commands</b></summary>
+<summary><b>Server & advanced commands</b></summary>
 
 | Command | What it does |
 |:---|:---|
-| `mblk server start` | Start the API & web UI server |
+| `mblk server start` | Start API & web UI server |
 | `mblk server stop` | Stop the server |
 | `mblk server status` | Show server PID and URL |
 | `mblk server token` | View or regenerate auth token |
@@ -148,18 +245,6 @@ mblk superblock ops-monitor --off  # back to sandboxed
 | `mblk settings [plugin]` | View/edit plugin settings |
 
 </details>
-
-## Configuration
-
-No more hunting for dotfiles:
-
-```bash
-mblk config           # global config
-mblk config auth      # API keys and credentials
-mblk config <block>   # block-specific config
-```
-
-Opens in your preferred editor (`$EDITOR` → `nano` → `vi` → `notepad`). Credentials are skippable during setup — add them whenever you're ready.
 
 ## How It Works
 
@@ -171,38 +256,139 @@ Opens in your preferred editor (`$EDITOR` → `nano` → `vi` → `notepad`). Cr
 └── blocks/
     ├── home/
     │   ├── config.json  # block settings, adapter, permissions
-    │   ├── monitor.md   # agent identity and personality
+    │   ├── monitor.md   # monitor identity and personality
     │   ├── memory.md    # persistent context across sessions
     │   ├── session.json # crash-recovery session state
+    │   ├── crons.json   # scheduled background tasks
+    │   ├── agents/      # ephemeral sub-agent workspaces
+    │   │   ├── research/
+    │   │   │   ├── config.json  # sandboxed config
+    │   │   │   ├── memory.md    # agent memory
+    │   │   │   ├── inbox.md     # async messages from monitor
+    │   │   │   └── logs/
+    │   │   └── writer/
+    │   │       └── ...
     │   └── logs/        # full conversation history
     └── ops-monitor/
         └── ...
 ```
 
-Each block is fully self-contained. To back up an agent, copy its folder. To move it to another server, paste it. No databases, no migrations.
+Each block is fully self-contained. Back up a monitor by copying its folder. Move it to another server by pasting it. No databases, no migrations.
 
 ## Architecture
 
-Built as a modular TypeScript monorepo with a strict DAG dependency graph:
+Modular TypeScript monorepo with strict dependency boundaries:
 
 | Package | Role |
 |:---|:---|
-| `memoryblock` | CLI entry point and setup tooling |
-| `@memoryblock/core` | Engine runtime — Monitor, Gatekeeper, Memory Manager |
-| `@memoryblock/tools` | 22+ built-in tools (files, shell, system) |
-| `@memoryblock/api` | HTTP & WebSocket server (`node:http` + `ws`) |
-| `@memoryblock/adapters` | LLM provider implementations |
-| `@memoryblock/channels` | Transport — CLI, WebSocket, Telegram |
-| `@memoryblock/types` | Shared TypeScript interfaces |
+| `memoryblock` | CLI entry point and setup wizards |
+| `@memoryblock/core` | Engine — Monitor, Gatekeeper, Memory Manager |
+| `@memoryblock/tools` | 30+ built-in tools (files, shell, system, auth, cron) |
+| `@memoryblock/api` | REST & WebSocket server |
+| `@memoryblock/adapters` | LLM providers (OpenAI, Anthropic, Gemini, Bedrock) |
+| `@memoryblock/channels` | CLI, Web, Telegram + MultiChannelManager |
 | `@memoryblock/daemon` | Background process lifecycle |
 | `@memoryblock/web` | Web dashboard UI |
+| `@memoryblock/types` | Shared TypeScript interfaces |
 | `@memoryblock/locale` | i18n and formatting |
+
+## How We Compare
+
+<table>
+<tr>
+<th></th>
+<th>Memoryblock</th>
+<th>OpenClaw</th>
+<th>Goose</th>
+<th>Claude Code</th>
+</tr>
+<tr>
+<td><b>Runtime</b></td>
+<td>Node.js / Bun</td>
+<td>Node / Python</td>
+<td>Rust</td>
+<td>Node.js</td>
+</tr>
+<tr>
+<td><b>Docker required</b></td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td><b>Isolated workspaces</b></td>
+<td>✅ Blocks</td>
+<td>❌</td>
+<td>❌</td>
+<td>❌</td>
+</tr>
+<tr>
+<td><b>Multi-channel sync</b></td>
+<td>✅ CLI + Web + Telegram</td>
+<td>Multi-channel (separate)</td>
+<td>CLI + Desktop</td>
+<td>CLI only</td>
+</tr>
+<tr>
+<td><b>Background daemon</b></td>
+<td>✅ + OS service</td>
+<td>✅</td>
+<td>❌</td>
+<td>Cloud only</td>
+</tr>
+<tr>
+<td><b>Cron scheduling</b></td>
+<td>✅ Native</td>
+<td>✅</td>
+<td>❌</td>
+<td>Cloud only</td>
+</tr>
+<tr>
+<td><b>Sub-agent orchestration</b></td>
+<td>✅ Full lifecycle</td>
+<td>Sessions</td>
+<td>Swarm</td>
+<td>Subagents</td>
+</tr>
+<tr>
+<td><b>Token optimization</b></td>
+<td>✅ Lazy + compact</td>
+<td>Standard</td>
+<td>Standard</td>
+<td>Compaction</td>
+</tr>
+<tr>
+<td><b>MCP support</b></td>
+<td>🔜 Planned</td>
+<td>❌</td>
+<td>✅ Native</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><b>Browser control</b></td>
+<td>🔜 Planned</td>
+<td>✅</td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+</table>
+
+## What's Coming
+
+We ship 2-3 features per release. Here's what's next:
+
+- Add Adapters : Ollama adapter (local models), OpenRouter, DeepSeek, and Groq
+- Add Tools : Vision/Image tools, Process management
+- Add Plugins : Broswer plugin
+- Add Channels : Discord, Slack, and WhatsApp
+- MCP protocol support
 
 ## Contributing & Support
 
 We welcome PRs! See [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
-If `memoryblock` is useful to you, consider [sponsoring the project](https://github.com/sponsors/mgks) or giving it a ⭐.
+If memoryblock is useful to you, consider [sponsoring the project](https://github.com/sponsors/mgks) or giving it a ⭐.
 
 ## License
 
