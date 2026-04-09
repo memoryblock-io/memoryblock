@@ -116,8 +116,6 @@ mblk start home --channel telegram  # route to Telegram
 mblk web                            # web dashboard at localhost:8420
 ```
 
-<!-- IMAGE: Screenshot collage showing the same conversation flowing across three interfaces — CLI terminal on the left, web dashboard in the center, Telegram chat on the right — with the same agent name/emoji and message thread visible in all three. Caption: "One agent. Three interfaces. Same conversation." -->
-
 ## Built-In Tools
 
 Every block ships with **30+ built-in tools** — no plugins required:
@@ -154,8 +152,6 @@ Memoryblock is designed from the ground up to minimize token consumption:
 | **Smart memory compaction** | When context grows large, the monitor summarizes key info and resets — no redundant history |
 | **Session state recovery** | Conversations persist to disk so you never re-explain context after a restart |
 | **Discovery → Use → Compact cycle** | Full tool schemas sent once, then compacted to a reminder for all subsequent turns |
-
-<!-- IMAGE: Simple horizontal bar chart comparing "Tokens per turn" across approaches: "Naive (all tools every turn)" at ~6000 tokens, "Memoryblock (lazy + compact)" at ~2000 tokens. Clean, minimal design with memoryblock's purple accent color. Caption: "~3x fewer tokens per turn compared to always-on tool injection." -->
 
 ## Monitor → Agent Orchestration
 
@@ -208,8 +204,6 @@ mblk superblock ops-monitor --off  # revoke
 ```
 
 **Interactive tool approval:** When a monitor tries to run a command, you see exactly what it wants to execute and approve or deny — in the CLI, web dashboard, or Telegram.
-
-<!-- IMAGE: Screenshot of the CLI showing a tool approval prompt — the agent wants to run `rm -rf ./dist && npm run build`, displayed with the command highlighted, and a [y/n] prompt waiting for the user. Clean terminal with purple accents. Caption: "Every dangerous command requires explicit human approval." -->
 
 ## Commands
 
