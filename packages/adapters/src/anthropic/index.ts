@@ -24,7 +24,7 @@ export class AnthropicAdapter implements LLMAdapter {
         
         const key = config.apiKey || process.env.ANTHROPIC_API_KEY;
         if (!key) {
-            throw new Error('Anthropic API key is missing. Run `mblk auth anthropic` or set ANTHROPIC_API_KEY');
+            throw new Error('Anthropic API key is missing. Run `mblk init` or set ANTHROPIC_API_KEY');
         }
         this.apiKey = key;
     }

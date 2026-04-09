@@ -24,7 +24,7 @@ export class GeminiAdapter implements LLMAdapter {
         
         const key = config.apiKey || process.env.GEMINI_API_KEY;
         if (!key) {
-            throw new Error('Gemini API key is missing. Run `mblk auth gemini` or set GEMINI_API_KEY');
+            throw new Error('Gemini API key is missing. Run `mblk init` or set GEMINI_API_KEY');
         }
         this.apiKey = key;
     }

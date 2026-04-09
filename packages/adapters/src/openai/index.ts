@@ -24,7 +24,7 @@ export class OpenAIAdapter implements LLMAdapter {
         
         const key = config.apiKey || process.env.OPENAI_API_KEY;
         if (!key) {
-            throw new Error('OpenAI API key is missing. Run `mblk auth openai` or set OPENAI_API_KEY');
+            throw new Error('OpenAI API key is missing. Run `mblk init` or set OPENAI_API_KEY');
         }
         this.apiKey = key;
     }
