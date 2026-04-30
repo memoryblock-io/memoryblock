@@ -21,7 +21,7 @@
   "dependencies": {
     "@memoryblock/types": "workspace:*",
     "chalk": "^5.4.0",
-    "grammy": "^1.35.0"
+    "grammy": "^1.42.0"
   },
   "peerDependencies": {
     "@memoryblock/core": "workspace:*"
