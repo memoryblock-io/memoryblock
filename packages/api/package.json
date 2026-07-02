@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@memoryblock/plugin-installer": "workspace:*",
-    "ws": "^8.18.1"
+    "ws": "^8.21.0"
   },
   "peerDependencies": {
     "@memoryblock/core": "workspace:*"
