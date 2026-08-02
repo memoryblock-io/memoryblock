@@ -20,8 +20,7 @@
   },
   "dependencies": {
     "@memoryblock/types": "workspace:*",
-    "@aws-sdk/client-bedrock-runtime": "^3.1022.0",
-    "@smithy/node-http-handler": "^3.0.0"
+    "aiplug": "link:../../../../../../Library/pnpm/global/5/node_modules/aiplug"
   },
   "keywords": [
     "memoryblock",
