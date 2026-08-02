@@ -175,7 +175,7 @@ try {
     // ========================================
     // 8. Security Audit
     // ========================================
-    console.log('\x1b[2m🚨 [8/8] Security Audit...\x1b[0m');
+    console.log('\x1b[2m🚨 [8/9] Security Audit...\x1b[0m');
     try {
         execSync('pnpm audit --audit-level=high', { cwd: CWD, stdio: 'pipe' });
     } catch (e) {
@@ -183,7 +183,31 @@ try {
         // Don't fail on audit warnings during early development
     }
 
-
+    // ========================================
+    // 9. Adapter Smoke Test
+    // ========================================
+    // Validates that all 5 adapters are built and the new GoogleAdapter
+    // export is wired correctly. Full live tests are in
+    // `pnpm dev:verify:adapters` which needs Ollama + auth.json.
+    console.log('\x1b[2m🔌 [9/9] Adapter Smoke Test (dist + exports)...\x1b[0m');
+    try {
+        const adapterDist = path.join(CWD, 'packages', 'adapters', 'dist');
+        assert(fs.existsSync(adapterDist), 'packages/adapters/dist missing — run pnpm dev:build');
+        for (const sub of ['bedrock', 'openai', 'google', 'anthropic', 'ollama']) {
+            assert(fs.existsSync(path.join(adapterDist, sub)),
+                `packages/adapters/dist/${sub} missing — adapter build incomplete`);
+        }
+        const idx = fs.readFileSync(path.join(adapterDist, 'index.d.ts'), 'utf8');
+        for (const exp of ['BedrockAdapter', 'OpenAIAdapter', 'GoogleAdapter', 'AnthropicAdapter', 'OllamaAdapter']) {
+            assert(idx.includes(exp), `expected export ${exp} not found in adapters/dist/index.d.ts`);
+        }
+        assert(idx.includes('google/index.js'), 'expected google/index.js import path');
+        assert(idx.includes('GoogleAdapter as GeminiAdapter'), 'expected GeminiAdapter deprecation alias');
+        console.log('  \x1b[32m✓\x1b[0m All 5 adapters built and exports correct (Google ✓, Gemini alias ✓)');
+        console.log('  \x1b[2m  Full live tests: pnpm dev:verify:adapters\x1b[0m');
+    } catch (e) {
+        console.warn(`\x1b[33m⚠️  ${e.message}\x1b[0m`);
+    }
 } catch (e) {
     console.error('\x1b[31m\x1b[1m\n❌ FAILSAFE CRITICAL FAILURE ❌\x1b[0m');
     console.error(e.message);
