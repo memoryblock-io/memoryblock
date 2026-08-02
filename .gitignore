@@ -26,6 +26,7 @@ _study
 _backup
 temp-*/
 .cache/
+.vscode/
 
 # Environment & Credentials
 .env*
