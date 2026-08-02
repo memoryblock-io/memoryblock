@@ -9,6 +9,8 @@
     "dev:lint": "npx eslint 'packages/*/src/**/*.ts' 'packages/plugins/*/src/**/*.ts'",
     "dev:lint:fix": "npx eslint --fix 'packages/*/src/**/*.ts' 'packages/plugins/*/src/**/*.ts'",
     "dev:verify": "$HOME/.bun/bin/bun scripts/verify.js",
+    "dev:verify:adapters": "$HOME/.bun/bin/bun scripts/verify-adapters.js",
+    "dev:verify:v1": "$HOME/.bun/bin/bun scripts/verify-v1.js",
     "dev:getpub": "node scripts/getpub.mjs",
     "dev:reset": "node scripts/reset.js",
     "dev:prep": "pnpm dev:clean && pnpm dev:verify",
@@ -27,12 +29,15 @@
     "mblk:remove": "$HOME/.bun/bin/bun packages/memoryblock/src/entry.ts remove"
   },
   "devDependencies": {
-    "@eslint/js": "^9.27.0",
-    "@types/node": "^20.0.0",
-    "eslint": "^9.39.3",
-    "prettier": "^3.8.1",
-    "typescript": "^5.7.0",
-    "typescript-eslint": "^8.58.0"
+    "@eslint/js": "^9.39.4",
+    "@types/node": "^20.19.43",
+    "eslint": "^9.39.4",
+    "prettier": "^3.9.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.62.1"
+  },
+  "dependencies": {
+    "aiplug": ">=0.1.0"
   },
   "engines": {
     "bun": ">=1.0.0",
@@ -42,7 +47,8 @@
   "pnpm": {
     "overrides": {
       "flatted": "^3.4.2",
-      "fast-xml-parser": "^5.5.7"
+      "fast-xml-parser": "^5.5.7",
+      "aiplug": "link:../../../../Library/pnpm/global/5/node_modules/aiplug"
     }
   },
   "keywords": [
