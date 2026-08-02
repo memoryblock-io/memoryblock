@@ -1740,6 +1740,38 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
     animation: pulse 1s infinite;
 }
 
+/* Token-cost bar pinned below the chat header. Three columns: turn,
+   session, total. Stays visible so the user always knows how much the
+   conversation is costing. */
+.chat-cost-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 24px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    background: var(--surface);
+    backdrop-filter: var(--glass-blur);
+    flex-wrap: wrap;
+}
+.chat-cost-item { display: inline-flex; gap: 6px; align-items: baseline; }
+.chat-cost-label { text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.65rem; opacity: 0.75; }
+.chat-cost-value { color: var(--text); font-variant-numeric: tabular-nums; }
+.chat-cost-divider { opacity: 0.4; }
+
+/* Per-message cost footer under each assistant turn. Mirrors the CLI
+   cost badge so the web and TUI show the same data in the same shape. */
+.msg-cost {
+    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+}
+
 .chat-messages {
     flex: 1;
     padding: 24px;
@@ -1985,4 +2017,182 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
 .chat-input-area.disabled-input textarea {
     cursor: not-allowed;
     background: var(--bg);
+}
+/* ===== Providers Settings Section ===== */
+
+.providers-section {
+    width: 100%;
+}
+
+.default-adapter-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.default-adapter-row .setting-label {
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.default-adapter-row .setting-desc {
+    color: var(--text-dim);
+    font-size: 0.875rem;
+}
+
+.providers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.provider-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0;
+    overflow: hidden;
+    transition: border-color 0.15s;
+}
+
+.provider-card.configured { border-left: 3px solid var(--success); }
+.provider-card.unconfigured { border-left: 3px solid var(--warning); }
+
+.provider-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.provider-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-dot.on  { background: var(--success); box-shadow: 0 0 6px var(--success); }
+.status-dot.off { background: var(--warning); }
+
+.provider-name strong { font-size: 1rem; }
+.provider-hint { color: var(--text-dim); font-size: 0.85rem; }
+
+.provider-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.provider-actions .btn-small { padding: 5px 12px; font-size: 0.85rem; }
+
+.provider-body {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.provider-status {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.provider-status.ok      { color: var(--success); }
+.provider-status.missing { color: var(--warning); }
+
+.provider-fields {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+}
+
+.provider-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.provider-field label {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    font-weight: 500;
+}
+
+.input-with-button {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-with-button .form-input {
+    flex: 1;
+    padding-right: 40px;
+}
+
+.btn-tiny {
+    position: absolute;
+    right: 6px;
+    background: transparent;
+    border: 0;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 0.95rem;
+    padding: 4px 6px;
+    border-radius: 6px;
+}
+.btn-tiny:hover { color: var(--text); background: var(--hover-bg); }
+
+.field-hint {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    margin-top: 2px;
+}
+.field-hint code {
+    background: var(--code-bg);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    color: var(--accent);
+}
+
+.flash-banner {
+    position: relative;
+    margin: 0 0 16px 0;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 0.2s, transform 0.2s;
+    border: 1px solid transparent;
+}
+.flash-banner.show { opacity: 1; transform: translateY(0); }
+.flash-banner.flash-success { background: rgba(52, 199, 89, 0.12); border-color: var(--success); color: var(--success); }
+.flash-banner.flash-error   { background: rgba(255, 59, 48, 0.12);  border-color: var(--error);   color: var(--error); }
+
+.error-banner {
+    background: rgba(255, 59, 48, 0.12);
+    border: 1px solid var(--error);
+    color: var(--error);
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+    .provider-header { flex-direction: column; align-items: flex-start; }
+    .provider-actions { width: 100%; }
 }

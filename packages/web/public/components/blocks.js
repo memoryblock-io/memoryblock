@@ -4,6 +4,7 @@
 
 import { api, connectWs } from '../app.js';
 import { showToast } from './create-block.js';
+import { escHtml, attrEsc } from '../escape.js';
 
 let activeWs = null;
 
@@ -46,20 +47,20 @@ async function loadBlocks(container) {
                 const desc = block.description || '';
 
                 return `
-                    <div class="block-card" data-block="${name}">
+                    <div class="block-card" data-block="${attrEsc(name)}">
                         <div class="block-info">
-                            <span class="block-emoji">${emoji}</span>
-                            <div class="block-name">${name}</div>
-                            ${desc ? `<div class="block-desc">${desc}</div>` : ''}
+                            <span class="block-emoji">${escHtml(emoji)}</span>
+                            <div class="block-name">${escHtml(name)}</div>
+                            ${desc ? `<div class="block-desc">${escHtml(desc)}</div>` : ''}
                             <div class="block-details-tags">
-                                <span class="tag"><span class="tag-icon">${emoji}</span> ${monitorName}</span>
-                                <span class="tag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tag-svg" style="margin-right:4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> ${block.adapter?.provider || 'unknown'}</span>
-                                ${(block.channel || 'cli').split(',').map(c => `<span class="tag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tag-svg" style="margin-right:4px;"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg> ${c.trim()}</span>`).join('')}
+                                <span class="tag"><span class="tag-icon">${escHtml(emoji)}</span> ${escHtml(monitorName)}</span>
+                                <span class="tag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tag-svg" style="margin-right:4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> ${escHtml(block.adapter?.provider || 'unknown')}</span>
+                                ${(block.channel || 'cli').split(',').map(c => `<span class="tag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tag-svg" style="margin-right:4px;"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg> ${escHtml(c.trim())}</span>`).join('')}
                             </div>
                         </div>
                         <div class="block-meta">
-                            <div class="status-indicator"><span class="status-dot ${status}"></span>${status}</div>
-                            <div style="font-size:0.75rem; opacity:0.6">${formatTokens((block.costs?.totalInput || 0) + (block.costs?.totalOutput || 0))} tokens</div>
+                            <div class="status-indicator"><span class="status-dot ${escHtml(status)}"></span>${escHtml(status)}</div>
+                            <div style="font-size:0.75rem; opacity:0.6">${escHtml(formatTokens((block.costs?.totalInput || 0) + (block.costs?.totalOutput || 0)))} tokens</div>
                         </div>
                     </div>
                 `;
@@ -104,16 +105,16 @@ export async function renderBlockDetail(container, blockName) {
                             back to blocks
                         </button>
                     </div>
-                    
+
                     <div class="detail-header-block">
                         <div class="detail-header-info">
-                            <div class="detail-title">${config.name}</div>
-                            ${config.description ? `<div class="detail-subtitle">${config.description}</div>` : ''}
-                            
+                            <div class="detail-title">${escHtml(config.name)}</div>
+                            ${config.description ? `<div class="detail-subtitle">${escHtml(config.description)}</div>` : ''}
+
                             <div class="block-details-tags" style="margin-top: 14px;">
-                                <span class="tag"><span class="tag-icon">${config.monitorEmoji || '⬡'}</span> ${config.monitorName || 'default monitor'}</span>
-                                <span class="tag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tag-svg" style="margin-right:4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> ${config.adapter?.provider || 'unknown'} ${model}</span>
-                                ${(config.channel?.type || 'cli').split(',').map(c => `<span class="tag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tag-svg" style="margin-right:4px;"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg> ${c.trim()}</span>`).join('')}
+                                <span class="tag"><span class="tag-icon">${escHtml(config.monitorEmoji || '⬡')}</span> ${escHtml(config.monitorName || 'default monitor')}</span>
+                                <span class="tag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tag-svg" style="margin-right:4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> ${escHtml(config.adapter?.provider || 'unknown')} ${escHtml(model)}</span>
+                                ${(config.channel?.type || 'cli').split(',').map(c => `<span class="tag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tag-svg" style="margin-right:4px;"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg> ${escHtml(c.trim())}</span>`).join('')}
                             </div>
                         </div>
 
@@ -132,17 +133,17 @@ export async function renderBlockDetail(container, blockName) {
                     <div id="tab-overview">
                         <div class="detail-section">
                             <h4>memory.md</h4>
-                            <div class="memory-content" id="val-memory">${escapeHtml(memory.slice(0, 1500))}</div>
+                            <div class="memory-content" id="val-memory">${escHtml(memory.slice(0, 1500))}</div>
                         </div>
 
                         <div class="detail-section">
                             <h4>monitor.md (agent logic tree)</h4>
-                            <div class="memory-content" id="val-monitor">${escapeHtml(monitor.slice(0, 1500))}</div>
+                            <div class="memory-content" id="val-monitor">${escHtml(monitor.slice(0, 1500))}</div>
                         </div>
 
                         <div class="detail-section">
                             <h4>active goals</h4>
-                            <div class="memory-content" style="background:transparent; border:none; padding:0;">${(config.goals || []).map(g => '• ' + g).join('<br>') || '(none set)'}</div>
+                            <div class="memory-content" style="background:transparent; border:none; padding:0;">${(config.goals || []).map(g => '• ' + escHtml(g)).join('<br>') || '(none set)'}</div>
                         </div>
                     </div>
 
@@ -151,11 +152,11 @@ export async function renderBlockDetail(container, blockName) {
                             <h3>General Options</h3>
                             <div class="form-group" style="margin-bottom:16px;">
                                 <label>Description</label>
-                                <input type="text" id="cfg-desc" class="form-input" value="${escapeHtml(config.description || '')}" placeholder="What does this block do?" />
+                                <input type="text" id="cfg-desc" class="form-input" value="${escHtml(config.description || '')}" placeholder="What does this block do?" />
                             </div>
                             <div class="form-group" style="margin-bottom:16px;">
                                 <label>System Prompt (Persona)</label>
-                                <textarea id="cfg-prompt" class="form-input" style="min-height:90px; resize:vertical;" placeholder="You are a helpful assistant...">${escapeHtml(config.systemPrompt || '')}</textarea>
+                                <textarea id="cfg-prompt" class="form-input" style="min-height:90px; resize:vertical;" placeholder="You are a helpful assistant...">${escHtml(config.systemPrompt || '')}</textarea>
                             </div>
                         </div>
 
@@ -164,11 +165,11 @@ export async function renderBlockDetail(container, blockName) {
                             <div class="stat-grid">
                                 <div class="form-group">
                                     <label>Display Name</label>
-                                    <input type="text" id="cfg-mon-name" class="form-input" value="${escapeHtml(config.monitorName || '')}" placeholder="e.g. Chief Editor" />
+                                    <input type="text" id="cfg-mon-name" class="form-input" value="${escHtml(config.monitorName || '')}" placeholder="e.g. Chief Editor" />
                                 </div>
                                 <div class="form-group">
                                     <label>Monitor Emoji</label>
-                                    <input type="text" id="cfg-mon-emoji" class="form-input" value="${escapeHtml(config.monitorEmoji || '')}" maxlength="4" placeholder="⬡" />
+                                    <input type="text" id="cfg-mon-emoji" class="form-input" value="${escHtml(config.monitorEmoji || '')}" maxlength="4" placeholder="⬡" />
                                 </div>
                             </div>
                         </div>
@@ -179,16 +180,12 @@ export async function renderBlockDetail(container, blockName) {
                                 <div class="form-group">
                                     <label>Provider Runtime</label>
                                     <select id="cfg-provider" class="form-input">
-                                        <option value="bedrock" ${config.adapter?.provider === 'bedrock' ? 'selected' : ''}>AWS Bedrock</option>
-                                        <option value="openai" ${config.adapter?.provider === 'openai' ? 'selected' : ''}>OpenAI</option>
-                                        <option value="anthropic" ${config.adapter?.provider === 'anthropic' ? 'selected' : ''}>Anthropic</option>
-                                        <option value="gemini" ${config.adapter?.provider === 'gemini' ? 'selected' : ''}>Google Gemini</option>
-                                        <option value="ollama" ${config.adapter?.provider === 'ollama' ? 'selected' : ''}>Ollama</option>
+                                        <!-- Populated from /api/providers at render time so the dropdown always tracks the aiplug registry. -->
                                     </select>
                                 </div>
                                 <div class="form-group">
                                     <label>Model String</label>
-                                    <input type="text" id="cfg-model" class="form-input" value="${escapeHtml(config.adapter?.model || '')}" placeholder="e.g. gpt-4o" />
+                                    <input type="text" id="cfg-model" class="form-input" value="${escHtml(config.adapter?.model || '')}" placeholder="e.g. gpt-4o" />
                                 </div>
                             </div>
                         </div>
@@ -235,6 +232,18 @@ export async function renderBlockDetail(container, blockName) {
                                         <option value="false" ${!config.tools?.sandbox ? 'selected' : ''}>Disabled</option>
                                     </select>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-panel">
+                            <h3>Superblock <span style="font-size:0.7rem; font-weight:normal; color:#f44;">(Dangerous — full system access)</span></h3>
+                            <p style="font-size:0.85rem; opacity:0.7; margin:0 0 10px;">
+                                Grants this block <code>scope: system</code> + <code>allowShell: true</code>.
+                                The monitor can read and write anywhere on disk and run any shell command without approval.
+                            </p>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <button class="action-btn danger" id="superblock-btn">${(config.permissions?.scope === 'system' && config.permissions?.allowShell) ? 'Revoke Superblock' : 'Enable Superblock'}</button>
+                                <span id="superblock-state" style="font-size:0.85rem; opacity:0.75;">${(config.permissions?.scope === 'system' && config.permissions?.allowShell) ? 'currently ON' : 'currently OFF'}</span>
                             </div>
                         </div>
 
@@ -295,8 +304,8 @@ export async function renderBlockDetail(container, blockName) {
                 document.getElementById('val-in').textContent = formatTokens(live.costs?.totalInput || 0);
                 document.getElementById('val-out').textContent = formatTokens(live.costs?.totalOutput || 0);
                 document.getElementById('val-status').textContent = live.pulse?.status || 'SLEEPING';
-                if (document.getElementById('val-memory')) document.getElementById('val-memory').innerHTML = escapeHtml(live.memory?.slice(0, 1500) || '');
-                if (document.getElementById('val-monitor')) document.getElementById('val-monitor').innerHTML = escapeHtml(live.monitor?.slice(0, 1500) || '');
+                if (document.getElementById('val-memory')) document.getElementById('val-memory').innerHTML = escHtml(live.memory?.slice(0, 1500) || '');
+                if (document.getElementById('val-monitor')) document.getElementById('val-monitor').innerHTML = escHtml(live.monitor?.slice(0, 1500) || '');
             } catch {}
         });
 
@@ -378,6 +387,63 @@ export async function renderBlockDetail(container, blockName) {
                 btn.disabled = false;
             }
         });
+
+        // Superblock toggle — switches scope between 'system' and 'block',
+        // and flips allowShell accordingly. Backend handles persistence.
+        const superBtn = document.getElementById('superblock-btn');
+        if (superBtn) {
+            superBtn.addEventListener('click', async () => {
+                const isOn = superBtn.textContent.trim() === 'Revoke Superblock';
+                const next = !isOn;
+                const confirmMsg = next
+                    ? `Enable Superblock for "${blockName}"?\n\nThe monitor will have full system access — all files, all shell commands, no approval prompts.\n\nThis is a privilege escalation. Only do this for trusted blocks.`
+                    : `Revoke Superblock from "${blockName}"? Block will go back to scope=block, allowShell=false.`;
+                if (!confirm(confirmMsg)) return;
+                superBtn.disabled = true;
+                const originalText = superBtn.textContent;
+                superBtn.textContent = next ? 'Enabling...' : 'Revoking...';
+                try {
+                    const res = await api(`/api/blocks/${blockName}/superblock`, {
+                        method: 'POST',
+                        body: JSON.stringify({ on: next }),
+                    });
+                    showToast(next ? 'Superblock enabled.' : 'Superblock revoked.');
+                    // Refresh the detail view to reflect the new permissions.
+                    renderBlockDetail(container, blockName);
+                } catch (e) {
+                    showToast('Superblock toggle failed: ' + e.message);
+                    superBtn.textContent = originalText;
+                    superBtn.disabled = false;
+                }
+            });
+        }
+
+        // Populate the provider dropdown from the aiplug registry so it
+        // tracks every provider currently bundled (bedrock, openai, anthropic,
+        // gemini, ollama, minimax, deepseek, together, groq, vllm, …).
+        const providerSelect = document.getElementById('cfg-provider');
+        const currentProvider = config.adapter?.provider;
+        api('/api/providers').then(data => {
+            if (!providerSelect || !data.providers) return;
+            providerSelect.innerHTML = data.providers.map(p => {
+                const slug = p.slug || p.value;
+                const label = p.displayName || slug;
+                const selected = slug === currentProvider ? 'selected' : '';
+                return `<option value="${attrEsc(slug)}" ${selected}>${escHtml(label)}</option>`;
+            }).join('');
+        }).catch(() => {
+            // Fallback: aiplug not loaded. Populate with the original five.
+            providerSelect.innerHTML = [
+                ['bedrock', 'AWS Bedrock'],
+                ['openai', 'OpenAI'],
+                ['anthropic', 'Anthropic'],
+                ['gemini', 'Google Gemini'],
+                ['ollama', 'Ollama'],
+            ].map(([slug, label]) =>
+                `<option value="${attrEsc(slug)}" ${currentProvider === slug ? 'selected' : ''}>${escHtml(label)}</option>`
+            ).join('');
+        });
+
         // Save Settings button
         document.getElementById('save-config-btn').addEventListener('click', async () => {
             const btn = document.getElementById('save-config-btn');
@@ -437,8 +503,4 @@ function formatTokens(n) {
     if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
     if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
     return n.toString();
-}
-
-function escapeHtml(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

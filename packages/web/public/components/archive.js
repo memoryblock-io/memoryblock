@@ -1,6 +1,7 @@
 // archive.js — Archive management component
 
 import { showToast } from './create-block.js';
+import { escHtml, attrEsc } from '../escape.js';
 
 export function renderArchive(container, { apiBase, token }) {
     container.innerHTML = `
@@ -38,16 +39,16 @@ async function loadArchives(apiBase, token) {
         }
 
         listEl.innerHTML = data.archives.map(a => `
-            <div class="archive-card" data-name="${a.archiveName}">
+            <div class="archive-card" data-name="${attrEsc(a.archiveName)}">
                 <div class="archive-info">
-                    <span class="archive-name">${a.originalName}</span>
-                    <span class="archive-date">${formatDate(a.archivedAt)}</span>
+                    <span class="archive-name">${escHtml(a.originalName)}</span>
+                    <span class="archive-date">${escHtml(formatDate(a.archivedAt))}</span>
                 </div>
                 <div class="archive-actions">
-                    <button class="action-btn" data-action="restore" data-archive="${a.archiveName}">
+                    <button class="action-btn" data-action="restore" data-archive="${attrEsc(a.archiveName)}">
                         Restore
                     </button>
-                    <button class="action-btn danger" data-action="delete" data-archive="${a.archiveName}">
+                    <button class="action-btn danger" data-action="delete" data-archive="${attrEsc(a.archiveName)}">
                         Delete Forever
                     </button>
                 </div>
@@ -62,7 +63,7 @@ async function loadArchives(apiBase, token) {
             btn.addEventListener('click', () => handleDelete(btn.dataset.archive, apiBase, token));
         });
     } catch (err) {
-        listEl.innerHTML = `<div class="error-state">Failed to load archives: ${err.message}</div>`;
+        listEl.innerHTML = `<div class="error-state">Failed to load archives: ${escHtml(err.message)}</div>`;
     }
 }
 

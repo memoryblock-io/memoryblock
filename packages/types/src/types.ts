@@ -42,6 +42,8 @@ export interface AdapterConfig {
     region: string;
     maxTokens: number;
     cacheControl: boolean;
+    /** Optional API endpoint override. Used by Ollama (`http://localhost:11434/v1`) and any OpenAI-compatible base URL swap. */
+    baseURL?: string;
 }
 
 export interface ToolsConfig {
@@ -103,7 +105,37 @@ export interface GlobalConfig {
     };
 }
 
+/**
+ * Per-provider auth shape. Each provider is keyed by its aiplug slug
+ * (e.g. `minimax`, `openai`, `bedrock-aws`) and holds whatever credentials
+ * that transport needs. Field names match aiplug's `configSchema(slug)`
+ * output, so a new provider needs no schema change here — just add it to
+ * aiplug's registry.
+ */
+export interface ProviderAuth {
+    apiKey?: string;
+    baseURL?: string;
+    model?: string;
+    region?: string;
+    accessKeyId?: string;
+    secretAccessKey?: string;
+    sessionToken?: string;
+    headers?: Record<string, string>;
+    [k: string]: unknown;
+}
+
 export interface AuthConfig {
+    /**
+     * Generic per-provider credentials, indexed by aiplug slug. New
+     * providers should write to this slot. Consumers should fall back to
+     * the legacy `aws` / `openai` / `google` etc. fields below for
+     * backward compatibility with auth.json files written before the
+     * generic shape was introduced.
+     */
+    providers?: Record<string, ProviderAuth>;
+
+    // Legacy fields — kept so existing auth.json files keep working.
+    /** @deprecated use `auth.providers.bedrock` or `auth.providers.bedrock-aws`. */
     aws?: {
         accessKeyId: string;
         secretAccessKey: string;
@@ -112,6 +144,10 @@ export interface AuthConfig {
     openai?: {
         apiKey: string;
     };
+    google?: {
+        apiKey: string;
+    };
+    /** @deprecated legacy alias for `google`. */
     gemini?: {
         apiKey: string;
     };

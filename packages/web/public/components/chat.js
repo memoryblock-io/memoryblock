@@ -1,12 +1,16 @@
 import { api, connectWs, getToken } from '../app.js';
+import { escHtml, escUrl } from '../escape.js';
 
 /**
  * Lightweight markdown-to-HTML renderer.
  * Handles: bold, italic, code blocks, inline code, headers, lists, links, line breaks.
+ * CWE-79: every interpolation passes through escHtml first. Links are
+ * also gated by escUrl so a hostile assistant that emits `[x](javascript:…)`
+ * can't run script in the dashboard.
  */
 function renderMarkdown(text) {
     if (!text) return '';
-    
+
     // Escape HTML first
     let html = text
         .replace(/&/g, '&amp;')
@@ -33,8 +37,10 @@ function renderMarkdown(text) {
     html = html.replace(/(?<!\w)_(.+?)_(?!\w)/g, '<em>$1</em>');
     html = html.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
 
-    // Links: [text](url)
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    // Links: [text](url). URL passes through escUrl which collapses
+    // javascript: and data: schemes to about:blank.
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, text, url) =>
+        `<a href="${escUrl(url)}" target="_blank" rel="noopener noreferrer">${text}</a>`);
 
     // Unordered lists: - item or * item (at start of line)
     html = html.replace(/^[\-\*] (.+)$/gm, '<li>$1</li>');
@@ -107,27 +113,35 @@ export async function renderChatView(container, blockName) {
                 <button class="sidebar-expand-btn hidden" id="sidebar-expand-btn" title="Show sidebar">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                 </button>
-                
+
                 <div class="chat-main">
                     <div class="chat-header">
                         <div class="chat-header-left">
                             <button class="chat-close-btn" id="chat-close-btn" title="Close chat">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                             </button>
-                            <h2>${escapeHtml(displayName)}</h2>
+                            <h2>${escHtml(displayName)}</h2>
                         </div>
                         <span class="status-indicator" id="chat-status">
                             <span class="status-dot sleeping"></span>
                             <span id="chat-status-text">Checking...</span>
                         </span>
                     </div>
-                    
+
+                    <div class="chat-cost-bar" id="chat-cost-bar" title="Token usage — turn / session / total">
+                        <span class="chat-cost-item"><span class="chat-cost-label">turn</span><span class="chat-cost-value" id="chat-cost-turn">—</span></span>
+                        <span class="chat-cost-divider">·</span>
+                        <span class="chat-cost-item"><span class="chat-cost-label">session</span><span class="chat-cost-value" id="chat-cost-session">0 in / 0 out</span></span>
+                        <span class="chat-cost-divider">·</span>
+                        <span class="chat-cost-item"><span class="chat-cost-label">total</span><span class="chat-cost-value" id="chat-cost-total">0 in / 0 out</span></span>
+                    </div>
+
                     <div class="chat-messages" id="chat-messages">
                         <div class="chat-msg system">
-                            <div class="msg-content">Joined Web Channel for ${escapeHtml(displayName)}.</div>
+                            <div class="msg-content">Joined Web Channel for ${escHtml(displayName)}.</div>
                         </div>
                     </div>
-                    
+
                     <div class="chat-input-area">
                         <textarea id="chat-input" placeholder="Type a message... (Enter to send, Shift+Enter for new line)" rows="1"></textarea>
                         <button id="chat-send-btn" class="action-btn primary"><span class="action-icon">↑</span></button>
@@ -184,7 +198,7 @@ export async function renderChatView(container, blockName) {
             messagesDiv.innerHTML = '';
             renderedMessageCount = 0;
             removeTypingIndicator();
-            appendMessage('system', `Viewing ${channelLabels[session] || session} logs for ${escapeHtml(displayName)}.`);
+            appendMessage('system', `Viewing ${channelLabels[session] || session} logs for ${escHtml(displayName)}.`);
             loadChatHistory(session, true);
 
             // Disable input if not web channel
@@ -222,19 +236,43 @@ export async function renderChatView(container, blockName) {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
-    function appendMessage(role, content) {
+    function appendMessage(role, content, meta) {
         removeTypingIndicator();
         const msgDiv = document.createElement('div');
         msgDiv.className = `chat-msg ${role}`;
-        
+
+        let body = '';
         if (role === 'assistant' || role === 'system') {
-            msgDiv.innerHTML = `<div class="msg-content">${renderMarkdown(content)}</div>`;
+            body = renderMarkdown(content);
         } else if (role === 'error') {
-            msgDiv.innerHTML = `<div class="msg-content">${escapeHtml(content)}</div>`;
+            body = escHtml(content);
         } else {
-            msgDiv.innerHTML = `<div class="msg-content">${escapeHtml(content).replace(/\n/g, '<br>')}</div>`;
+            body = escHtml(content).replace(/\n/g, '<br>');
         }
-        
+        msgDiv.innerHTML = `<div class="msg-content">${body}</div>`;
+
+        // Per-message cost badge for assistant turns. Hidden when meta
+        // doesn't carry any cost info (e.g. loading historical messages
+        // that pre-date the cost tracking).
+        if (role === 'assistant' && meta && (meta.costReport || meta.sessionReport || meta.totalReport)) {
+            const badge = document.createElement('div');
+            badge.className = 'msg-cost';
+            const parts = [];
+            if (meta.costReport)    parts.push(`turn: ${escHtml(meta.costReport)}`);
+            if (meta.sessionReport) parts.push(`session: ${escHtml(meta.sessionReport)}`);
+            if (meta.totalReport)   parts.push(`total: ${escHtml(meta.totalReport)}`);
+            badge.textContent = `· ${parts.join('  ·  ')} ·`;
+            msgDiv.appendChild(badge);
+
+            // Update the persistent "turn" cell in the top cost bar.
+            const turnEl = document.getElementById('chat-cost-turn');
+            if (turnEl && meta.costReport) turnEl.textContent = meta.costReport;
+            const sessionEl = document.getElementById('chat-cost-session');
+            if (sessionEl && meta.sessionReport) sessionEl.textContent = meta.sessionReport;
+            const totalEl = document.getElementById('chat-cost-total');
+            if (totalEl && meta.totalReport) totalEl.textContent = meta.totalReport;
+        }
+
         messagesDiv.appendChild(msgDiv);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
@@ -273,16 +311,47 @@ export async function renderChatView(container, blockName) {
             if (data.messages && data.messages.length > renderedMessageCount) {
                 const newMessages = data.messages.slice(renderedMessageCount);
                 renderedMessageCount = data.messages.length;
-                
+
                 resetStreamDiv();
-                
+
                 for (const m of newMessages) {
-                    appendMessage(m.role, m.content);
+                    // Pass the cost fields through so the per-message
+                    // badge can render turn/session/total under each
+                    // assistant turn that produced them.
+                    appendMessage(m.role, m.content, {
+                        costReport: m.costReport,
+                        sessionReport: m.sessionReport,
+                        totalReport: m.totalReport,
+                    });
                 }
             }
         } catch {
             // failed to load history
         }
+    }
+
+    // Refresh the top cost bar from the live cost endpoint. Called after
+    // each completed turn and on WebSocket refresh so the user always
+    // sees an up-to-date session + total.
+    async function refreshCostBar() {
+        try {
+            const data = await api(`/api/blocks/${blockName}/cost`);
+            const c = data.costs || {};
+            const turn = document.getElementById('chat-cost-turn');
+            const session = document.getElementById('chat-cost-session');
+            const total = document.getElementById('chat-cost-total');
+            if (session) session.textContent = `${formatTokens(c.sessionInput || 0)} in / ${formatTokens(c.sessionOutput || 0)} out`;
+            if (total)   total.textContent   = `${formatTokens(c.totalInput || 0)} in / ${formatTokens(c.totalOutput || 0)} out`;
+            // "turn" is only set on the most recent assistant message; we
+            // leave the previous value until a new message arrives.
+            void turn;
+        } catch { /* ignore */ }
+    }
+
+    function formatTokens(n) {
+        if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+        if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'k';
+        return String(n);
     }
 
     async function updateConnectionStatus() {
@@ -369,6 +438,7 @@ export async function renderChatView(container, blockName) {
     chatWs = connectWs(blockName, () => {
         loadChatHistory(currentSession, false); // initialLoad = false for ws refresh
         updateConnectionStatus();
+        refreshCostBar();
     });
 
     chatWs.addEventListener('message', (e) => {
@@ -383,12 +453,10 @@ export async function renderChatView(container, blockName) {
     currentSession = 'web';
     loadChatHistory('web', true);
     updateConnectionStatus();
+    refreshCostBar();
+    // Periodic cost refresh so the bar stays current even when nothing
+    // else triggers a re-render.
+    const costRefresh = setInterval(refreshCostBar, 5000);
+    overlay.addEventListener('cleanup', () => clearInterval(costRefresh), { once: true });
     setTimeout(() => chatInput.focus(), 300);
-}
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>'"]/g, tag => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-    }[tag] || tag));
 }

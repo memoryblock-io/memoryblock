@@ -4,6 +4,8 @@
  */
 
 import { clearToken, getTheme, setTheme, api } from '../app.js';
+import { renderProviders } from './providers.js';
+import { escHtml } from '../escape.js';
 
 export function renderSettings(container) {
     const currentTheme = getTheme();
@@ -13,6 +15,7 @@ export function renderSettings(container) {
             <div class="settings-nav">
                 <button class="settings-nav-item active" data-target="general">General</button>
                 <button class="settings-nav-item" data-target="appearance">Appearance</button>
+                <button class="settings-nav-item" data-target="providers">Providers</button>
                 <button class="settings-nav-item" data-target="plugins">Plugins</button>
                 <button class="settings-nav-item" data-target="advanced">Advanced</button>
             </div>
@@ -75,6 +78,13 @@ export function renderSettings(container) {
                     </div>
                 </div>
 
+                <!-- Providers Settings -->
+                <div class="settings-content-section" id="setting-providers">
+                    <div class="settings-panel" id="providers-panel">
+                        <div class="loading">Loading providers…</div>
+                    </div>
+                </div>
+
                 <!-- Plugins Settings -->
                 <div class="settings-content-section" id="setting-plugins">
                     <div class="settings-panel">
@@ -104,14 +114,27 @@ export function renderSettings(container) {
     // Tab Navigation
     const navItems = container.querySelectorAll('.settings-nav-item');
     navItems.forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             navItems.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            
+
             container.querySelectorAll('.settings-content-section').forEach(sec => {
                 sec.classList.remove('active');
             });
-            container.querySelector(`#setting-${btn.dataset.target}`).classList.add('active');
+            const target = container.querySelector(`#setting-${btn.dataset.target}`);
+            target.classList.add('active');
+
+            // Lazy-load the providers panel when first opened
+            if (btn.dataset.target === 'providers' && !target.dataset.loaded) {
+                target.dataset.loaded = '1';
+                try {
+                    const cfg = await api('/api/config');
+                    renderProviders(target.querySelector('#providers-panel'), cfg);
+                } catch (err) {
+                    target.querySelector('#providers-panel').innerHTML =
+                        `<div class="error-banner">Failed to load global config: ${escHtml(err.message)}</div>`;
+                }
+            }
         });
     });
 

@@ -17,6 +17,7 @@ export async function serverStartCommand(options?: {
     port?: string;
     newToken?: boolean;
     daemon?: boolean;
+    host?: string;
 }): Promise<void> {
     if (!(await isInitialized())) {
         log.error('Not initialized. Run `mblk init` first.');
@@ -24,6 +25,15 @@ export async function serverStartCommand(options?: {
     }
 
     const port = parseInt(options?.port || DEFAULT_PORT, 10);
+    // Default to loopback (127.0.0.1). `--host 0.0.0.0` is the explicit
+    // opt-in for remote access; everything else (no flag, or `--host
+    // 127.0.0.1`) keeps the server on localhost where the dashboard and
+    // bearer token stay inside the user's machine.
+    const host = options?.host ?? '127.0.0.1';
+    if (host === '0.0.0.0') {
+        log.warn('  Binding to 0.0.0.0 — server is reachable from your LAN.');
+        log.dim('  Anyone with the bearer token can connect. Run on a trusted network only.');
+    }
 
     // Check if server is already running (skip if stored PID is our own — we ARE the daemon child)
     const existingPid = await readServerPid();
@@ -62,7 +72,7 @@ export async function serverStartCommand(options?: {
             await writeServerPort(port);
             log.brand('server\n');
             log.success(`  Server started as daemon (PID ${child.pid}).`);
-            log.dim(`  http://localhost:${port}`);
+            log.dim(`  http://localhost:${port}  (bound to ${host})`);
             log.dim('  `mblk server stop` to shut down.\n');
         } else {
             log.error('Failed to spawn daemon process.');
@@ -112,7 +122,18 @@ export async function serverStartCommand(options?: {
         authToken,
         workspacePath,
         webRoot,
+        host,
     });
+
+    // Mount the public /v1 surface (adapters + chat). The /v1/health
+    // endpoint is public; everything else requires the bearer token.
+    try {
+        const v1 = await import('@memoryblock/api/v1');
+        server.registerRouter('/v1', v1.v1Router);
+        server.allowPublic('/v1/health');
+    } catch {
+        // v1 module not available in this build — silently skip
+    }
 
     const shutdown = async () => {
         log.system('server', 'shutting down...');

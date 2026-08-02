@@ -19,9 +19,9 @@
     "prepublishOnly": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1079.0",
     "@memoryblock/types": "workspace:*",
-    "@aws-sdk/client-bedrock-runtime": "^3.1022.0",
-    "@smithy/node-http-handler": "^4.0.0"
+    "@smithy/node-http-handler": "^4.9.3"
   },
   "peerDependencies": {
     "@memoryblock/core": "workspace:*"

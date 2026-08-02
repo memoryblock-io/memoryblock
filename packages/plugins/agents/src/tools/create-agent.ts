@@ -13,7 +13,7 @@ export const createAgentTool = {
         parameters: createSchema({
             name: { type: 'string', description: 'Agent identifier, lowercase alphanumeric and hyphens (e.g. "code-reviewer")' },
             description: { type: 'string', description: 'What this agent is designed to do' },
-            model: { type: 'string', description: 'The LLM model to use. Defaults to bedrock but can be openai, gemini, or anthropic if api keys configured (e.g. "gpt-4o", "gemini-2.5-pro", "claude-3-5-sonnet-20241022").' }
+            model: { type: 'string', description: 'The LLM model to use. Defaults to bedrock but can be openai, google, ollama, or anthropic if configured (e.g. "gpt-4o", "gemini-3.5-flash", "claude-3-5-sonnet-20241022", "qwen2.5:0.5b").' }
         }, ['name', 'description']),
         requiresApproval: true
     },
@@ -39,8 +39,9 @@ export const createAgentTool = {
             // Determine provider natively based on common prefixes
             let provider = 'bedrock';
             if (model.includes('gpt-') || model.includes('o1-')) provider = 'openai';
-            if (model.includes('gemini-')) provider = 'gemini';
+            if (model.includes('gemini-')) provider = 'google';
             if (model.includes('claude-') && !model.includes('anthropic.')) provider = 'anthropic';
+            if (model.includes(':')) provider = 'ollama'; // Ollama tags use `name:tag` shape (e.g. `qwen2.5:0.5b`)
 
             // Adopt default config with sandbox enabled
             const config = BlockConfigSchema.parse({

@@ -7,6 +7,8 @@ export const AdapterConfigSchema = z.object({
     region: z.string().default('us-east-1'),
     maxTokens: z.number().default(4096),
     cacheControl: z.boolean().default(false),
+    /** Optional API endpoint override. Used by Ollama (`http://localhost:11434/v1`) and any OpenAI-compatible base URL swap. */
+    baseURL: z.string().optional(),
 });
 
 // ===== Tools =====
@@ -128,15 +130,61 @@ export const OpenAIAuthSchema = z.object({
     apiKey: z.string(),
 });
 
-export const GeminiAuthSchema = z.object({
+export const GoogleAuthSchema = z.object({
     apiKey: z.string(),
 });
 
-export const AuthConfigSchema = z.object({
-    aws: AwsAuthSchema.optional(),
-    anthropic: AnthropicAuthSchema.optional(),
-    openai: OpenAIAuthSchema.optional(),
-    gemini: GeminiAuthSchema.optional(),
-    telegram: TelegramAuthSchema.optional(),
-    brave: BraveAuthSchema.optional(),
+/** @deprecated alias for `GoogleAuthSchema`. */
+export const GeminiAuthSchema = GoogleAuthSchema;
+
+/** Ollama has no API key — the only configurable value is the daemon endpoint. */
+export const OllamaAuthSchema = z.object({
+    baseURL: z.string().optional(),
 });
+
+/**
+ * Per-provider auth shape. New providers should write to
+ * `auth.providers[slug]` with whatever fields their aiplug transport
+ * needs (apiKey, baseURL, region, accessKeyId, etc.). The Zod schema
+ * is `passthrough()` so any extra fields flow through untouched.
+ */
+const ProviderAuthSchema = z
+    .object({
+        apiKey: z.string().optional(),
+        baseURL: z.string().optional(),
+        model: z.string().optional(),
+        region: z.string().optional(),
+        accessKeyId: z.string().optional(),
+        secretAccessKey: z.string().optional(),
+        sessionToken: z.string().optional(),
+        headers: z.record(z.string()).optional(),
+    })
+    .passthrough();
+
+/**
+ * Top-level auth.json schema.
+ *
+ * `passthrough()` keeps any provider sections the user has manually added
+ * that aren't yet in the Zod registry (so e.g. a future `cohere` or `mistral`
+ * field isn't silently dropped on save).
+ *
+ * `providers` is the new generic shape: a record of provider slug →
+ * credentials. New providers should write here. Legacy fields below are
+ * kept so existing auth.json files keep working; `loadAuth()` flattens
+ * the new shape into the legacy fields so legacy code keeps working
+ * without modification.
+ */
+export const AuthConfigSchema = z
+    .object({
+        providers: z.record(z.string(), ProviderAuthSchema).optional(),
+        aws: AwsAuthSchema.optional(),
+        anthropic: AnthropicAuthSchema.optional(),
+        openai: OpenAIAuthSchema.optional(),
+        google: GoogleAuthSchema.optional(),
+        /** @deprecated legacy alias for `google`. */
+        gemini: GoogleAuthSchema.optional(),
+        ollama: OllamaAuthSchema.optional(),
+        telegram: TelegramAuthSchema.optional(),
+        brave: BraveAuthSchema.optional(),
+    })
+    .passthrough();

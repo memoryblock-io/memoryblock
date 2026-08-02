@@ -11,6 +11,20 @@
 // These are irrelevant to end-users and completely break the TUI/console animations.
 process.removeAllListeners('warning');
 
+// Top-level error boundary. Any uncaught throw or unhandled rejection
+// exits non-zero so CI gates catch it. Without this, a missing
+// `await` or a thrown init error would print a stack trace and exit 0.
+process.on('uncaughtException', (err) => {
+    console.error(`Fatal: ${err instanceof Error ? err.message : String(err)}`);
+    if (process.env['VERBOSE']) console.error(err instanceof Error ? err.stack : '');
+    process.exit(1);
+});
+process.on('unhandledRejection', (reason) => {
+    console.error(`Fatal: ${reason instanceof Error ? reason.message : String(reason)}`);
+    if (process.env['VERBOSE']) console.error(reason instanceof Error ? reason.stack : '');
+    process.exit(1);
+});
+
 import { Command } from 'commander';
 import { log } from '@memoryblock/core';
 import { getVersion, DEFAULT_PORT } from './constants.js';
@@ -193,6 +207,20 @@ program
         }
     });
 
+program
+    .command('providers [target]')
+    .description('Manage LLM providers (API keys, baseURL, default adapter).')
+    .option('-y, --yes', 'Non-interactive mode: only show current state, do not prompt')
+    .action(async (target: string | undefined, opts: { yes?: boolean }) => {
+        try {
+            const { providersCommand } = await import('./commands/providers.js');
+            await providersCommand(target, { nonInteractive: opts.yes });
+        } catch (err) {
+            log.error((err as Error).message);
+            process.exit(0);
+        }
+    });
+
 // ===== Server Subcommand Group =====
 
 const server = program
@@ -205,7 +233,8 @@ server
     .option('-p, --port <port>', 'Port to listen on', DEFAULT_PORT)
     .option('--new-token', 'Generate a new auth token')
     .option('-d, --daemon', 'Run the server in the background')
-    .action(async (opts: { port?: string; newToken?: boolean; daemon?: boolean }) => {
+    .option('--host <host>', 'Interface to bind to (default 127.0.0.1; pass 0.0.0.0 for LAN)')
+    .action(async (opts: { port?: string; newToken?: boolean; daemon?: boolean; host?: string }) => {
         try {
             await serverStartCommand(opts);
         } catch (err) {
@@ -327,7 +356,8 @@ program
     .option('-p, --port <port>', 'Port to listen on', DEFAULT_PORT)
     .option('--new-token', 'Generate a new auth token')
     .option('-d, --daemon', 'Run the server in the background')
-    .action(async (opts: { port?: string; newToken?: boolean; daemon?: boolean }) => {
+    .option('--host <host>', 'Interface to bind to (default 127.0.0.1; pass 0.0.0.0 for LAN)')
+    .action(async (opts: { port?: string; newToken?: boolean; daemon?: boolean; host?: string }) => {
         try {
             await serverStartCommand(opts);
         } catch (err) {

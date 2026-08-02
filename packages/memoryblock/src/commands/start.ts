@@ -7,10 +7,16 @@ import {
 import { t } from '@memoryblock/locale';
 import { Monitor } from '@memoryblock/core';
 import { promises as fsp } from 'node:fs';
+import process from 'node:process';
 import { pathExists } from '@memoryblock/core';
 import { log } from '@memoryblock/core';
 import { join } from 'node:path';
-import { PROVIDERS, PLUGINS } from '../constants.js';
+import { getImportantProviders, PLUGINS } from '../constants.js';
+
+// Type-only import so `resolveSchemaFields` can cast the dynamic import
+// result without pulling `aiplug` into the static import graph. The runtime
+// `aiplug` load still happens lazily below.
+import type * as AIPlugModule from 'aiplug';
 
 // Use variable-based dynamic imports so TypeScript doesn't try to resolve
 // these at compile time. They are runtime-only dependencies.
@@ -20,6 +26,125 @@ const CHANNELS_PKG = '@memoryblock/channels';
 const WEB_SEARCH_PKG = '@memoryblock/plugin-web-search';
 const DAEMON_PKG = '@memoryblock/daemon';
 const AGENTS_PKG = '@memoryblock/plugin-agents';
+
+/**
+ * Resolve credentials for any aiplug-registered provider.
+ *
+ * The shape of the returned object is whatever the provider's schema
+ * requires — discovered at runtime from `AIPlug.configSchema(slug)`. For
+ * most providers this is `{ apiKey, baseURL, model }`; for Bedrock-family
+ * providers it is `{ apiKey, region, accessKeyId, secretAccessKey, baseURL,
+ * model }`; for OpenAI-compatible providers that don't need a key (Ollama,
+ * LM Studio) it is `{}`.
+ *
+ * Resolution order, per field, is uniform across all providers:
+ *
+ *   1. `auth.providers?.[slug]?.[field]` (generic shape from the init wizard)
+ *   2. `auth?.[slug]?.[field]`           (legacy per-provider fields)
+ *   3. `auth?.[legacyAlias]?.[field]`    (e.g. `auth.gemini` → `google`,
+ *                                       `auth.aws` → `bedrock-aws` / `bedrock`)
+ *   4. `<FIELD>` env var                (e.g. `API_KEY`, `ACCESS_KEY_ID`,
+ *                                       `SECRET_ACCESS_KEY`, `REGION`,
+ *                                       `BASE_URL`)
+ *   5. `<SLUG>_<FIELD>` env var         (snake-cased slug + field name)
+ *
+ * No hardcoded provider branches — adding a new provider requires only
+ * updating aiplug's registry, not memoryblock.
+ */
+
+async function resolveProviderCredentials(
+  provider: string,
+  auth: any,
+): Promise<Record<string, string | undefined>> {
+  const fields = await resolveSchemaFields(provider);
+  const out: Record<string, string | undefined> = {};
+
+  for (const field of fields) {
+    out[field] = resolveField(provider, field, auth);
+  }
+
+  // Ollama and other keyless providers return an empty object — the
+  // adapter factory accepts missing apiKey.
+  return out;
+}
+
+/**
+ * Return the field keys the provider needs (e.g. `['apiKey', 'baseURL',
+ * 'model']` or `['region', 'accessKeyId', 'secretAccessKey', 'baseURL',
+ * 'model']`). Driven by aiplug's introspection so adding a provider to
+ * aiplug automatically extends memoryblock's config surface.
+ */
+
+async function resolveSchemaFields(provider: string): Promise<string[]> {
+  try {
+    // Lazy dynamic import — `aiplug` may not be installed at module load
+    // (e.g. during `pnpm install` in a fresh checkout). The cast uses the
+    // top-level type-only import so the type comes from the same source.
+    const aiplug: typeof AIPlugModule = await import('aiplug');
+    const schema = aiplug.AIPlug.configSchema(provider);
+    return schema.fields.map((f) => f.key);
+  } catch {
+    // aiplug missing or provider unknown — fall back to the canonical
+    // bearer-key shape.
+    return ['apiKey', 'baseURL', 'model'];
+  }
+}
+
+/**
+ * Resolve a single field from auth + env. Lookup order is uniform across
+ * all providers and all field types (see `resolveProviderCredentials`
+ * header). Legacy aliases for the original five hardcoded providers
+ * are recognised so existing `auth.json` files keep working.
+ */
+
+function resolveField(provider: string, field: string, auth: any): string | undefined {
+  const slugEnv = `${provider.replace(/-/g, '_').toUpperCase()}_${field.toUpperCase()}`;
+  const genericEnv = field.toUpperCase();
+
+  // 1. Generic `auth.providers[slug][field]`
+  const generic = auth?.providers?.[provider];
+  if (generic && typeof generic === 'object' && field in generic) {
+    return generic[field];
+  }
+
+  // 2. Legacy `auth[slug][field]`
+  const legacy = auth?.[provider];
+  if (legacy && typeof legacy === 'object' && field in legacy) {
+    return legacy[field];
+  }
+
+  // 3. Legacy alias — only the original five providers have one. Map is
+  // intentionally explicit so a typo can't silently pull from the wrong
+  // account.
+  const alias = LEGACY_AUTH_ALIAS[provider];
+  if (alias) {
+    const aliased = auth?.[alias];
+    if (aliased && typeof aliased === 'object' && field in aliased) {
+      return aliased[field];
+    }
+  }
+
+  // 4. Provider-specific env (`MINIMAX_API_KEY`, `OPENAI_BASE_URL`, ...)
+  if (process.env[slugEnv]) return process.env[slugEnv];
+
+  // 5. Generic env (`API_KEY`, `BASE_URL`, `AWS_REGION`, ...) — for
+  // AWS-family fields this is the canonical source.
+  if (process.env[genericEnv]) return process.env[genericEnv];
+
+  return undefined;
+}
+
+/**
+ * Legacy `auth.json` field aliases for the original five hardcoded
+ * providers. These exist so existing auth files keep working without
+ * migration; new auth.json files should use `auth.providers[slug]`.
+ */
+const LEGACY_AUTH_ALIAS: Record<string, string> = {
+  google: 'gemini',         // historical alias for Google Gemini
+  bedrock: 'aws',            // bedrock shared the AWS credentials block
+  'bedrock-aws': 'aws',      // bedrock-aws does too
+  'bedrock-converse': 'aws',
+};
 
 async function setupBlockRuntimeLogs(
     blockConfig: any,
@@ -38,41 +163,40 @@ async function setupBlockRuntimeLogs(
     log.dim(`  ${model} · ${channelType} · ${blockConfig.tools.sandbox ? 'sandboxed' : 'unrestricted'}`);
     console.log('');
 
-    // Initialize adapter
+    // Initialize adapter — generic, aiplug-driven dispatch.
     let adapter: any;
     try {
-        const adapters = await import(ADAPTERS_PKG);
+        const { createMemoryAdapter } = await import(ADAPTERS_PKG);
         const provider = blockConfig.adapter.provider || 'bedrock';
+        const creds = await resolveProviderCredentials(provider, auth);
 
-        if (provider === 'openai') {
-            adapter = new adapters.OpenAIAdapter({
-                model: blockConfig.adapter.model,
-                apiKey: auth.openai?.apiKey || process.env.OPENAI_API_KEY,
-            });
-            log.dim(`  ✓ openai adapter`);
-        } else if (provider === 'gemini') {
-            adapter = new adapters.GeminiAdapter({
-                model: blockConfig.adapter.model,
-                apiKey: auth.gemini?.apiKey || process.env.GEMINI_API_KEY,
-            });
-            log.dim(`  ✓ gemini adapter`);
-        } else if (provider === 'anthropic') {
-            adapter = new adapters.AnthropicAdapter({
-                model: blockConfig.adapter.model,
-                apiKey: auth.anthropic?.apiKey || process.env.ANTHROPIC_API_KEY,
-            });
-            log.dim(`  ✓ anthropic adapter`);
-        } else {
-            // Bedrock: pass credentials directly
-            adapter = new adapters.BedrockAdapter({
-                model: blockConfig.adapter.model,
-                region: blockConfig.adapter.region || auth.aws?.region || 'us-east-1',
-                maxTokens: blockConfig.adapter.maxTokens,
-                accessKeyId: auth.aws?.accessKeyId || process.env.AWS_ACCESS_KEY_ID,
-                secretAccessKey: auth.aws?.secretAccessKey || process.env.AWS_SECRET_ACCESS_KEY,
-            });
-            log.dim(`  ✓ bedrock adapter`);
+        // Block-config overrides win over auth resolution — a per-block
+        // baseURL or region pin takes priority over the global default.
+        const merged: Record<string, unknown> = {
+            provider,
+            model: blockConfig.adapter.model,
+        };
+        for (const [k, v] of Object.entries(creds)) {
+            if (typeof v === 'string' && v.length > 0) merged[k] = v;
         }
+        if (blockConfig.adapter.baseURL) merged.baseURL = blockConfig.adapter.baseURL;
+        if (blockConfig.adapter.region) merged.region = blockConfig.adapter.region;
+        if (blockConfig.adapter.maxTokens) merged.maxTokens = blockConfig.adapter.maxTokens;
+
+        // Non-secret credentials (region / access keys / headers) go through
+        // `providerOptions` so the adapters factory forwards them to aiplug
+        // without needing to know what fields the transport consumes.
+        const nonSecretKeys = ['region', 'accessKeyId', 'secretAccessKey', 'sessionToken', 'headers'];
+        const providerOptions: Record<string, unknown> = {};
+        for (const k of nonSecretKeys) {
+            const v = merged[k];
+            if (typeof v === 'string' && v.length > 0) providerOptions[k] = v;
+        }
+        if (Object.keys(providerOptions).length > 0) merged.providerOptions = providerOptions;
+        for (const k of nonSecretKeys) delete merged[k];
+
+        adapter = createMemoryAdapter(merged as any);
+        log.dim(`  ✓ ${provider} adapter`);
     } catch (err) {
         throw new Error(`Failed to load adapter: ${(err as Error).message}`);
     }
@@ -175,6 +299,10 @@ async function attachCLIToRunningBlock(blockName: string, blockPath: string): Pr
 
     let lastKnownLength = 0;
     let lastStreamLength = 0;
+    // Indices of chat.json messages whose body was already streamed via
+    // flushStream (so flushChat should skip rendering their content and
+    // only print the costReport). Keys are message positions in chat.json.
+    const streamedMessageIndices = new Set<number>();
 
     try {
         const raw = await fsp.readFile(chatFile, 'utf8');
@@ -236,6 +364,12 @@ async function attachCLIToRunningBlock(blockName: string, blockPath: string): Pr
                     const chunk = raw.subarray(lastStreamLength).toString('utf8');
                     await cli.streamChunk(chunk);
                     lastStreamLength = raw.length;
+                    // Mark the next chat.json message as already-streamed so
+                    // flushChat doesn't re-render its content via cli.send.
+                    // The monitor writes to .stream first, then appends the
+                    // assistant message to chat.json, so the message index
+                    // we expect here is lastKnownLength (the next unread one).
+                    streamedMessageIndices.add(lastKnownLength);
                 }
             }
         } catch {
@@ -247,21 +381,33 @@ async function attachCLIToRunningBlock(blockName: string, blockPath: string): Pr
         try {
             const msgs = JSON.parse(await fsp.readFile(chatFile, 'utf8'));
             if (msgs.length > lastKnownLength) {
-                for (let i = lastKnownLength; i < msgs.length; i++) {
-                    const m = msgs[i];
-                    if (m.role !== 'user') {
-                        await cli.send({
-                            blockName,
-                            monitorName: m.role === 'system' ? 'system' : monitorLabel,
-                            content: m.content || '',
-                            isSystem: m.role === 'system',
-                            timestamp: m.timestamp,
-                            costReport: m.costReport
-                        });
-                    }
-                }
+                // Advance the cursor BEFORE iterating. If a concurrent
+                // flushChat (poll + watcher overlap) reads the same chat.json,
+                // it will see lastKnownLength already up-to-date and bail out.
+                const toProcess = msgs.slice(lastKnownLength);
                 lastKnownLength = msgs.length;
-                lastStreamLength = 0; 
+                lastStreamLength = 0;
+                for (let i = 0; i < toProcess.length; i++) {
+                    const m = toProcess[i];
+                    const realIndex = lastKnownLength - toProcess.length + i;
+                    if (m.role === 'user') continue;
+
+                    // Skip content for already-streamed messages — the
+                    // body was already painted by cli.streamChunk, we
+                    // only need the cost badge + trailing newlines.
+                    const wasStreamed = streamedMessageIndices.delete(realIndex);
+                    const contentToRender = wasStreamed ? '' : (m.content || '');
+                    await cli.send({
+                        blockName,
+                        monitorName: m.role === 'system' ? 'system' : monitorLabel,
+                        content: contentToRender,
+                        isSystem: m.role === 'system',
+                        timestamp: m.timestamp,
+                        costReport: m.costReport,
+                        sessionReport: m.sessionReport,
+                        totalReport: m.totalReport,
+                    });
+                }
             }
         } catch { /* ignore */ }
     };
@@ -306,99 +452,32 @@ async function attachCLIToRunningBlock(blockName: string, blockPath: string): Pr
     await cli.start();
 }
 
-
-
 /**
  * Model selection per provider.
- * For API-based providers: fetch available models dynamically.
- * Fallback: let user enter a model ID manually.
+ *
+ * Sources `popularModels` from aiplug's registry meta (no network call, no
+ * credentials required). Falls back to manual entry when the registry has
+ * nothing for this slug or the user picks `_custom`.
  */
-async function selectModel(provider: string, auth: any): Promise<string> {
+async function selectModel(provider: string, _auth: any): Promise<string> {
     console.log('');
     p.intro(chalk.bold('Model Selection'));
     p.log.info(`Let's pick a model for the ${chalk.bold(provider)} provider.`);
 
-    if (provider === 'openai') {
-        // Try to fetch models from OpenAI API
-        const apiKey = auth.openai?.apiKey || process.env.OPENAI_API_KEY;
-        if (apiKey) {
-            try {
-                const s = p.spinner();
-                s.start('Fetching available OpenAI models...');
-                const res = await fetch('https://api.openai.com/v1/models', {
-                    headers: { 'Authorization': `Bearer ${apiKey}` },
-                });
-                const data = await res.json() as { data?: Array<{ id: string }> };
-                s.stop('Models fetched.');
+    let popularModels: string[] = [];
+    try {
+        const aiplug = await import('aiplug');
+        const desc = aiplug.AIPlug.describeProvider(provider);
+        popularModels = desc.popularModels ?? [];
+    } catch {
+        // aiplug missing or provider unknown — fall through to manual entry.
+    }
 
-                if (data.data && data.data.length > 0) {
-                    // Filter to chat-capable models
-                    const chatModels = data.data
-                        .filter(m => m.id.includes('gpt') || m.id.includes('o1') || m.id.includes('o3') || m.id.includes('o4'))
-                        .sort((a, b) => a.id.localeCompare(b.id))
-                        .slice(0, 20);
-
-                    if (chatModels.length > 0) {
-                        const selected = await p.select({
-                            message: 'Select an OpenAI model:',
-                            options: [
-                                ...chatModels.map(m => ({ value: m.id, label: m.id })),
-                                { value: '_custom', label: 'Enter custom model ID...' },
-                            ],
-                        });
-                        if (p.isCancel(selected)) throw new Error('Model selection cancelled.');
-                        if (selected !== '_custom') return selected as string;
-                    }
-                }
-            } catch {
-                // Fall through to manual entry
-            }
-        }
-    } else if (provider === 'gemini') {
-        // Try to fetch models from Gemini API
-        const apiKey = auth.gemini?.apiKey || process.env.GEMINI_API_KEY;
-        if (apiKey) {
-            try {
-                const s = p.spinner();
-                s.start('Fetching available Gemini models...');
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-                const data = await res.json() as { models?: Array<{ name: string; displayName: string; supportedGenerationMethods?: string[] }> };
-                s.stop('Models fetched.');
-
-                if (data.models && data.models.length > 0) {
-                    const chatModels = data.models
-                        .filter(m => m.supportedGenerationMethods?.includes('generateContent'))
-                        .filter(m => m.name.includes('gemini'))
-                        .slice(0, 20);
-
-                    if (chatModels.length > 0) {
-                        const selected = await p.select({
-                            message: 'Select a Gemini model:',
-                            options: [
-                                ...chatModels.map(m => ({
-                                    value: m.name.replace('models/', ''),
-                                    label: m.displayName,
-                                    hint: m.name.replace('models/', ''),
-                                })),
-                                { value: '_custom', label: 'Enter custom model ID...' },
-                            ],
-                        });
-                        if (p.isCancel(selected)) throw new Error('Model selection cancelled.');
-                        if (selected !== '_custom') return selected as string;
-                    }
-                }
-            } catch {
-                // Fall through to manual entry
-            }
-        }
-    } else if (provider === 'anthropic') {
-        // Anthropic doesn't have a public model listing endpoint
+    if (popularModels.length > 0) {
         const selected = await p.select({
-            message: 'Select an Anthropic model:',
+            message: `Select a ${provider} model:`,
             options: [
-                { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4', hint: 'latest' },
-                { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet', hint: 'balanced' },
-                { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku', hint: 'fast & affordable' },
+                ...popularModels.map((m) => ({ value: m, label: m })),
                 { value: '_custom', label: 'Enter custom model ID...' },
             ],
         });
@@ -406,16 +485,11 @@ async function selectModel(provider: string, auth: any): Promise<string> {
         if (selected !== '_custom') return selected as string;
     }
 
-    // Bedrock, Ollama, or custom fallback
-    const hint = provider === 'bedrock'
-        ? 'e.g. us.anthropic.claude-sonnet-4-5-20250929-v1:0'
-        : provider === 'ollama'
-            ? 'e.g. llama3, mistral, codellama'
-            : 'Enter model ID';
+    const placeholder = popularModels[0] ?? 'Enter model ID';
 
     const modelId = await p.text({
         message: `Enter the ${provider} model ID:`,
-        placeholder: hint,
+        placeholder,
         validate: (v) => {
             if (!v || !v.trim()) return 'Model ID is required.';
         },
@@ -531,13 +605,40 @@ async function miniOnboarding(blockConfig: any, blockPath: string, blockName: st
     }
 
     // ─── Step 1: Provider Selection ───────────────────────
+    // TUI uses the curated "important" shortlist (10 entries) so the prompt
+    // stays scannable. A `_custom` option lets the user type any other
+    // aiplug-registered slug — the full 100+ list is only ever shown in
+    // the web UI, where the picker scales fine.
+    const providerOptions = [
+        ...getImportantProviders(),
+        { value: '_custom', label: 'More…', hint: 'type any aiplug-registered provider slug' },
+    ];
     const selectedProvider = await p.select({
         message: 'Select your LLM provider:',
-        options: PROVIDERS,
+        options: providerOptions,
     });
 
     if (p.isCancel(selectedProvider)) throw new Error('Setup cancelled.');
-    const provider = selectedProvider as string;
+
+    let provider = selectedProvider as string;
+    if (provider === '_custom') {
+        // Free-form input for the full aiplug registry. The provider
+        // string is whatever slug the user typed — aiplug's loader
+        // will surface an error if the slug isn't registered, which
+        // start.ts catches and turns into a user-friendly message.
+        const typed = await p.text({
+            message: 'Enter the aiplug provider slug:',
+            placeholder: 'e.g. minimax, deepseek, zhipu, moonshot',
+            validate: (v) => {
+                if (!v || !v.trim()) return 'Provider slug is required.';
+                if (!/^[a-z0-9][a-z0-9-]*$/.test(v.trim())) {
+                    return 'Use a lowercase slug (letters, digits, hyphens).';
+                }
+            },
+        });
+        if (p.isCancel(typed)) throw new Error('Setup cancelled.');
+        provider = (typed as string).trim();
+    }
 
     // ─── Step 2: Model Selection ──────────────────────────
     const model = await selectModel(provider, auth);

@@ -80,29 +80,26 @@ export const queryAgentTool = {
 
             const blockConfig = await loadBlockConfig(blockPath);
 
-            // Load adapter natively
-            const adapters = await import('@memoryblock/adapters');
-            let adapter: any;
+            // Load adapter — single aiplug-backed factory. All providers (OpenAI,
+//             Google/Gemini, Anthropic, Ollama, Bedrock, MiniMax, …) flow through
+//             `createMemoryAdapter`, which itself delegates auth resolution to
+//             aiplug's introspection. Per-provider classes used to live here;
+//             they have all been removed.
+            const { createMemoryAdapter } = await import('@memoryblock/adapters');
+            const auth = await loadAuth();
             const provider = blockConfig.adapter.provider || 'bedrock';
-            if (provider === 'openai') {
-                const auth = await loadAuth();
-                adapter = new adapters.OpenAIAdapter({
-                    model: blockConfig.adapter.model,
-                    apiKey: auth?.openai?.apiKey || process.env.OPENAI_API_KEY || '',
-                });
-            } else if (provider === 'gemini') {
-                const auth = await loadAuth();
-                adapter = new adapters.GeminiAdapter({
-                    model: blockConfig.adapter.model,
-                    apiKey: auth?.gemini?.apiKey || process.env.GEMINI_API_KEY || '',
-                });
-            } else {
-                adapter = new adapters.BedrockAdapter({
-                    model: blockConfig.adapter.model,
-                    region: blockConfig.adapter.region,
-                    maxTokens: blockConfig.adapter.maxTokens,
-                });
-            }
+            const adapter = createMemoryAdapter({
+                provider,
+                model: blockConfig.adapter.model,
+                ...(auth?.aws?.accessKeyId && auth?.aws?.secretAccessKey
+                    ? { apiKey: `${auth.aws.accessKeyId}:${auth.aws.secretAccessKey}` }
+                    : {}),
+                providerOptions: {
+                    ...(auth?.aws?.accessKeyId ? { accessKeyId: auth.aws.accessKeyId } : {}),
+                    ...(auth?.aws?.secretAccessKey ? { secretAccessKey: auth.aws.secretAccessKey } : {}),
+                    ...(auth?.aws?.region ? { region: auth.aws.region } : {}),
+                },
+            });
 
             const registry = createDefaultRegistry();
             const channel = new OrchestratorChannel();

@@ -67,7 +67,7 @@ export const listAuthProvidersTool: Tool = {
     },
     async execute(): Promise<ToolExecutionResult> {
         return {
-            content: `Supported Auth schemas:\n- "aws" ({ accessKeyId, secretAccessKey, region })\n- "openai" ({ apiKey })\n- "gemini" ({ apiKey })\n- "anthropic" ({ apiKey })\n- "telegram" ({ botToken, chatId })\n- "brave" ({ apiKey })`,
+            content: `Supported Auth schemas:\n- "aws" ({ accessKeyId, secretAccessKey, region })\n- "openai" ({ apiKey })\n- "google" ({ apiKey })\n- "anthropic" ({ apiKey })\n- "telegram" ({ botToken, chatId })\n- "brave" ({ apiKey })`,
             isError: false
         };
     }

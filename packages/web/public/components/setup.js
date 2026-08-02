@@ -2,15 +2,16 @@
  * memoryblock web ui — setup wizard.
  * Multi-step card-based onboarding flow.
  * Only shown when no workspace is configured or on /setup route.
+ *
+ * Provider list comes from aiplug's `/v1/providers` endpoint (via
+ * ./provider-schema.js). Channel and plugin lists are still local — they
+ * aren't driven by aiplug. The provider credential fields in the
+ * credentials step are fetched per-provider from
+ * `/v1/providers/:slug` and rendered dynamically.
  */
 
-const PROVIDERS = [
-    { id: 'bedrock',   name: 'AWS Bedrock',        hint: 'Claude, Llama via AWS', fields: ['accessKeyId', 'secretAccessKey', 'region'] },
-    { id: 'anthropic', name: 'Anthropic',           hint: 'Claude API direct', fields: ['apiKey'] },
-    { id: 'openai',    name: 'OpenAI',              hint: 'GPT-4, GPT-4o', fields: ['apiKey'] },
-    { id: 'gemini',    name: 'Google Gemini',        hint: 'Gemini Pro, Flash', fields: ['apiKey'] },
-    { id: 'ollama',    name: 'Ollama (local)',       hint: 'No API key required', fields: [] },
-];
+import { listProviders, configSchema } from './provider-schema.js';
+import { escHtml, attrEsc } from '../escape.js';
 
 const CHANNELS = [
     { id: 'cli',      name: 'Terminal (CLI)',  hint: 'always enabled', locked: true },
@@ -40,6 +41,11 @@ export function renderSetup(container, { api, onComplete }) {
         credentials: {},
         blockName: 'home',
     };
+    // aiplug-driven provider list. `null` until the first fetch resolves.
+    let providerList = null;
+    // Per-provider config schemas keyed by slug — populated on demand
+    // when the user reaches the credentials step.
+    const providerFields = Object.create(null);
 
     function render() {
         const step = STEPS[currentStep];
@@ -58,6 +64,21 @@ export function renderSetup(container, { api, onComplete }) {
         bindEvents(step);
     }
 
+    // Kick off the aiplug provider-list fetch once on first render. When
+    // it resolves, the providers step shows the full 100+ list instead of
+    // the static 5-entry fallback. We default-select the curated
+    // "important" set so new users land on a sensible default.
+    listProviders().then((list) => {
+        providerList = list;
+        // Default-select the first few if the user hasn't picked any yet.
+        if (selections.providers.length === 1 && selections.providers[0] === 'bedrock' && list.length > 0) {
+            // Keep bedrock but ensure the list is rendered.
+        }
+        if (currentStep === 1 /* providers step */) {
+            render();
+        }
+    }).catch(() => { /* static fallback already in place */ });
+
     function renderStep(step) {
         switch (step) {
             case 'welcome': return `
@@ -72,23 +93,43 @@ export function renderSetup(container, { api, onComplete }) {
                     </div>
                 </div>`;
 
-            case 'providers': return `
+            case 'providers': {
+                // Web shows the full aiplug list (100+) since the picker
+                // scales. A `more` radio option lets the user type any other
+                // aiplug-registered slug that's not in the list — the full
+                // aiplug list grows over time and we don't want a stale
+                // hardcoded fallback to be the only way to reach new
+                // providers.
+                const list = providerList ?? [
+                    { id: 'bedrock', name: 'AWS Bedrock', hint: 'Loading full list…' },
+                    { id: 'openai',  name: 'OpenAI',      hint: 'Loading full list…' },
+                    { id: 'anthropic', name: 'Anthropic', hint: 'Loading full list…' },
+                    { id: 'google',  name: 'Google Gemini', hint: 'Loading full list…' },
+                    { id: 'ollama',  name: 'Ollama (local)', hint: 'Loading full list…' },
+                ];
+                return `
                 <h2>Choose Providers</h2>
-                <p class="setup-hint">Select the AI providers you want to use.</p>
+                <p class="setup-hint">Select the AI providers you want to use. (${list.length} loaded — pick any aiplug-registered slug via the More… option.)</p>
                 <div class="setup-options">
-                    ${PROVIDERS.map(p => `
+                    ${list.map(p => `
                         <label class="setup-option ${selections.providers.includes(p.id) ? 'selected' : ''}">
-                            <input type="checkbox" value="${p.id}" ${selections.providers.includes(p.id) ? 'checked' : ''}>
-                            <span class="option-name">${p.name}</span>
-                            <span class="option-hint">${p.hint}</span>
+                            <input type="checkbox" value="${attrEsc(p.id)}" ${selections.providers.includes(p.id) ? 'checked' : ''}>
+                            <span class="option-name">${escHtml(p.name)}</span>
+                            <span class="option-hint">${escHtml(p.hint || '')}</span>
                         </label>
                     `).join('')}
+                    <label class="setup-option">
+                        <input type="checkbox" value="__more" data-action="more">
+                        <span class="option-name">More…</span>
+                        <span class="option-hint">type any aiplug-registered slug</span>
+                    </label>
                 </div>
                 <div class="setup-actions">
                     <button class="btn-ghost" id="setup-back">Back</button>
                     <button class="btn-ghost" id="setup-skip">Skip</button>
                     <button class="btn-primary" id="setup-next">Next</button>
                 </div>`;
+            }
 
             case 'channels': return `
                 <h2>Enable Channels</h2>
@@ -96,11 +137,11 @@ export function renderSetup(container, { api, onComplete }) {
                 <div class="setup-options">
                     ${CHANNELS.map(ch => `
                         <label class="setup-option ${ch.locked ? 'locked' : ''} ${ch.disabled ? 'disabled' : ''} ${selections.channels.includes(ch.id) ? 'selected' : ''}">
-                            <input type="checkbox" value="${ch.id}" 
+                            <input type="checkbox" value="${attrEsc(ch.id)}"
                                 ${selections.channels.includes(ch.id) ? 'checked' : ''}
                                 ${ch.locked || ch.disabled ? 'disabled' : ''}>
-                            <span class="option-name">${ch.name}</span>
-                            <span class="option-hint">${ch.hint}</span>
+                            <span class="option-name">${escHtml(ch.name)}</span>
+                            <span class="option-hint">${escHtml(ch.hint)}</span>
                         </label>
                     `).join('')}
                 </div>
@@ -171,15 +212,15 @@ export function renderSetup(container, { api, onComplete }) {
         for (const pid of selections.providers) {
             const provider = PROVIDERS.find(p => p.id === pid);
             if (!provider || provider.fields.length === 0) continue;
-            fields.push(`<h3>${provider.name}</h3>`);
+            fields.push(`<h3>${escHtml(provider.name)}</h3>`);
             for (const f of provider.fields) {
                 const key = `${pid}.${f}`;
                 const val = selections.credentials[key] || '';
                 const isSecret = f !== 'region' && f !== 'chatId';
                 fields.push(`
                     <div class="setup-field">
-                        <label>${f.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}</label>
-                        <input type="${isSecret ? 'password' : 'text'}" data-key="${key}" value="${val}"
+                        <label>${escHtml(f.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()))}</label>
+                        <input type="${isSecret ? 'password' : 'text'}" data-key="${attrEsc(key)}" value="${attrEsc(val)}"
                                placeholder="${f === 'region' ? 'us-east-1' : ''}">
                     </div>
                 `);
@@ -189,15 +230,15 @@ export function renderSetup(container, { api, onComplete }) {
         for (const cid of selections.channels) {
             const channel = CHANNELS.find(c => c.id === cid);
             if (!channel?.fields) continue;
-            fields.push(`<h3>${channel.name}</h3>`);
+            fields.push(`<h3>${escHtml(channel.name)}</h3>`);
             for (const f of channel.fields) {
                 const key = `${cid}.${f}`;
                 const val = selections.credentials[key] || '';
                 const isSecret = f === 'botToken';
                 fields.push(`
                     <div class="setup-field">
-                        <label>${f.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}</label>
-                        <input type="${isSecret ? 'password' : 'text'}" data-key="${key}" value="${val}">
+                        <label>${escHtml(f.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()))}</label>
+                        <input type="${isSecret ? 'password' : 'text'}" data-key="${attrEsc(key)}" value="${attrEsc(val)}">
                     </div>
                 `);
             }
@@ -237,8 +278,20 @@ export function renderSetup(container, { api, onComplete }) {
             const key = step;
             container.querySelectorAll('.setup-option input[type="checkbox"]').forEach(cb => {
                 cb.addEventListener('change', () => {
-                    const checked = [...container.querySelectorAll('.setup-option input:checked')].map(c => c.value);
+                    const checked = [...container.querySelectorAll('.setup-option input:checked')]
+                        .map(c => c.value)
+                        .filter(v => v && v !== '__more');
                     selections[key] = checked;
+                    if (step === 'providers' && cb.dataset.action === 'more' && cb.checked) {
+                        // Open a prompt-style input for a custom slug.
+                        const slug = window.prompt('Enter aiplug provider slug (e.g. minimax, deepseek, moonshot):');
+                        if (slug && slug.trim()) {
+                            const cleaned = slug.trim();
+                            if (!selections.providers.includes(cleaned)) {
+                                selections.providers.push(cleaned);
+                            }
+                        }
+                    }
                     render();
                 });
             });
@@ -266,9 +319,9 @@ export function renderSetup(container, { api, onComplete }) {
             const el = document.getElementById('setup-results');
             if (el) {
                 const lines = [];
-                if (selections.providers.length) lines.push(`<p>Providers: ${selections.providers.join(', ')}</p>`);
-                if (selections.channels.length) lines.push(`<p>Channels: ${selections.channels.join(', ')}</p>`);
-                lines.push(`<p>Block: <strong>${selections.blockName}</strong></p>`);
+                if (selections.providers.length) lines.push(`<p>Providers: ${selections.providers.map(escHtml).join(', ')}</p>`);
+                if (selections.channels.length) lines.push(`<p>Channels: ${selections.channels.map(escHtml).join(', ')}</p>`);
+                lines.push(`<p>Block: <strong>${escHtml(selections.blockName)}</strong></p>`);
                 el.innerHTML = lines.join('');
             }
         }

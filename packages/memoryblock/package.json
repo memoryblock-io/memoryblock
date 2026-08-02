@@ -28,25 +28,25 @@
     "postinstall": "node ./bin/postinstall.js"
   },
   "dependencies": {
-    "@memoryblock/core": "workspace:*",
-    "@memoryblock/types": "workspace:*",
-    "@memoryblock/locale": "workspace:*",
-    "@memoryblock/daemon": "workspace:*",
-    "@memoryblock/api": "workspace:*",
-    "@memoryblock/tools": "workspace:*",
+    "@clack/prompts": "^1.7.0",
     "@memoryblock/adapters": "workspace:*",
+    "@memoryblock/api": "workspace:*",
     "@memoryblock/channels": "workspace:*",
-    "@memoryblock/web": "workspace:*",
+    "@memoryblock/core": "workspace:*",
+    "@memoryblock/daemon": "workspace:*",
+    "@memoryblock/locale": "workspace:*",
     "@memoryblock/plugin-agents": "workspace:*",
+    "@memoryblock/plugin-fetch-webpage": "workspace:*",
     "@memoryblock/plugin-installer": "workspace:*",
     "@memoryblock/plugin-web-search": "workspace:*",
-    "@memoryblock/plugin-fetch-webpage": "workspace:*",
-    "@clack/prompts": "^1.2.0",
-    "chalk": "^5.4.0",
-    "commander": "^13.0.0"
+    "@memoryblock/tools": "workspace:*",
+    "@memoryblock/types": "workspace:*",
+    "@memoryblock/web": "workspace:*",
+    "chalk": "^5.6.2",
+    "commander": "^13.1.0"
   },
   "devDependencies": {
-    "@types/bun": "^1.3.11"
+    "@types/bun": "^1.3.14"
   },
   "engines": {
     "node": ">=20.0.0"
