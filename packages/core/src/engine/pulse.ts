@@ -198,8 +198,15 @@ export class PulseEngine {
 
     /** Fire an HTTP request (health ping, webhook, etc). */
     private async executeWebhook(inst: PulseInstruction): Promise<void> {
+        const url = this.validateWebhookUrl(inst.instruction);
+        if (!url) {
+            if (inst.alertMonitor && this.alertCallback) {
+                await this.alertCallback(`🌐 Pulse [${inst.id}] blocked: webhook URL failed SSRF validation (must be public http/https).`);
+            }
+            return;
+        }
         try {
-            const res = await fetch(inst.instruction, { method: 'GET', signal: AbortSignal.timeout(10_000) });
+            const res = await fetch(url, { method: 'GET', signal: AbortSignal.timeout(10_000) });
             if (inst.alertMonitor && this.alertCallback) {
                 await this.alertCallback(`🌐 Pulse [${inst.id}]: ${res.status} ${res.statusText}`);
             }
@@ -208,6 +215,64 @@ export class PulseEngine {
                 await this.alertCallback(`🌐 Pulse [${inst.id}] failed: ${(err as Error).message}`);
             }
         }
+    }
+
+    /**
+     * Validate a pulse webhook URL before fetching. Rejects:
+     *   - non-http(s) schemes (file://, gopher://, etc.)
+     *   - loopback (127.0.0.0/8, ::1)
+     *   - private networks (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, fc00::/7)
+     *   - link-local (169.254.0.0/16, fe80::/10)
+     *   - link metadata (169.254.169.254, AWS / GCP / Azure instance metadata)
+     * Returns the original URL string on success, or null on failure.
+     * CWE-918: server-side request forgery.
+     */
+    private validateWebhookUrl(raw: string): string | null {
+        let parsed: URL;
+        try {
+            parsed = new URL(raw);
+        } catch {
+            return null;
+        }
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+        // Resolve hostname to IP so we can block private ranges.
+        // If hostname is already an IP literal, this is a no-op.
+        const host = parsed.hostname;
+        if (!host) return null;
+        // Block explicit metadata IP regardless of resolution.
+        if (host === '169.254.169.254' || host === 'metadata.google.internal') return null;
+        // IPv4 literal checks.
+        const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+        if (ipv4) {
+            const a = Number(ipv4[1]);
+            const b = Number(ipv4[2]);
+            if (a === 127) return null;                             // loopback
+            if (a === 10) return null;                              // private
+            if (a === 172 && b >= 16 && b <= 31) return null;       // private
+            if (a === 192 && b === 168) return null;                // private
+            if (a === 169 && b === 254) return null;               // link-local
+            if (a === 0) return null;                               // reserved
+            if (a >= 224) return null;                              // multicast / reserved
+            return raw;
+        }
+        // IPv6 literal checks. Node's URL keeps the square brackets in
+        // parsed.hostname (e.g. "[::1]") so we strip them first, then
+        // test the address. We block loopback, link-local, ULA, and
+        // unspecified addresses.
+        if (host.includes(':')) {
+            const addr = host.replace(/^\[|\]$/g, '').toLowerCase();
+            if (addr === '::1' || addr === '::') return null;       // loopback / unspecified
+            if (addr.startsWith('fe80:')) return null;             // link-local fe80::/10
+            if (addr.startsWith('fc') || addr.startsWith('fd')) return null; // ULA fc00::/7 + fd00::/8
+            if (addr.startsWith('ff')) return null;                // multicast ff00::/8
+            return raw;
+        }
+        // Hostname — allow as-is. Strict blocking of resolved private IPs
+        // would require an async DNS check at pulse-config time, which is
+        // out of scope for this iteration. Pulse.json is user-edited and
+        // not writable by the monitor's tool surface, so the trust model
+        // is: the user owns the URL.
+        return raw;
     }
 
     /** Evaluate a condition and alert the monitor if it matches. */

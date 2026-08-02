@@ -329,8 +329,16 @@ export class Monitor {
             }
 
             if (response.message.content) {
-                // Send response (token info passed as metadata)
-                await this.sendToChannel(response.message.content, sourceChannel, this.costTracker.getPerTurnReport());
+                // Send response with per-turn + session + total token reports.
+                // The channel decides how to render these (CLI badge, web
+                // dashboard, Telegram message, etc.).
+                await this.sendToChannel(
+                    response.message.content,
+                    sourceChannel,
+                    this.costTracker.getPerTurnReport(),
+                    this.costTracker.getSessionReport(),
+                    this.costTracker.getTotalReport(),
+                );
             }
 
             // Trim history AFTER sending response — keeps API messages lean
@@ -698,7 +706,13 @@ export class Monitor {
         return [discoveryTool];
     }
 
-    private async sendToChannel(content: string, targetChannel?: string, costReport?: string): Promise<void> {
+    private async sendToChannel(
+        content: string,
+        targetChannel?: string,
+        costReport?: string,
+        sessionReport?: string,
+        totalReport?: string,
+    ): Promise<void> {
         this.logger.logMonitor(content, {
             channel: targetChannel || this.blockConfig.channel.type,
             monitorName: this.monitorName,
@@ -713,6 +727,8 @@ export class Monitor {
             timestamp: new Date().toISOString(),
             _targetChannel: targetChannel,
             costReport,
+            sessionReport,
+            totalReport,
         });
     }
 

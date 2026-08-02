@@ -5,7 +5,7 @@ import {
     GlobalConfigSchema, BlockConfigSchema, AuthConfigSchema, PulseStateSchema,
 } from '@memoryblock/types';
 import type {
-    GlobalConfig, BlockConfig, AuthConfig, PulseState,
+    GlobalConfig, BlockConfig, AuthConfig, ProviderAuth, PulseState,
 } from '@memoryblock/types';
 
 // ===== Paths =====
@@ -63,11 +63,69 @@ export async function saveGlobalConfig(config: GlobalConfig): Promise<void> {
 
 // ===== Auth =====
 /**
+ * Map from generic `auth.providers[slug]` entries to the legacy
+ * top-level fields that downstream code reads (e.g. `auth.openai.apiKey`).
+ * Bedrock-family slugs all flatten to `auth.aws` so the existing
+ * `auth.aws.accessKeyId` path keeps working.
+ *
+ * For any provider not in the map, the flatten target defaults to
+ * `openai` — this is intentional: most new providers are OpenAI-compatible,
+ * so the legacy resolver (`auth.openai?.apiKey || process.env.OPENAI_API_KEY`)
+ * picks up the key correctly. Non-OpenAI providers that get added later
+ * (e.g. a future Anthropic-only API) can extend this map.
+ */
+const LEGACY_SLOT: Record<string, string> = {
+    openai: 'openai',
+    anthropic: 'anthropic',
+    google: 'google',
+    gemini: 'gemini',
+    ollama: 'ollama',
+    bedrock: 'aws',
+    'bedrock-aws': 'aws',
+    'bedrock-converse': 'aws',
+};
+
+function flattenProviderAuth(auth: AuthConfig): AuthConfig {
+    if (!auth.providers) return auth;
+    const out: AuthConfig = { ...auth, providers: { ...auth.providers } };
+    for (const [slug, creds] of Object.entries(auth.providers)) {
+        // AWS-shaped credentials always go to `auth.aws`. Anything else
+        // (just apiKey) goes to its legacy slot if one exists, else to
+        // `auth.openai` — the OpenAI-compatible default that most new
+        // providers speak.
+        const hasAwsShape = (c: ProviderAuth | undefined) => Boolean(c?.accessKeyId || c?.secretAccessKey);
+        const target = LEGACY_SLOT[slug] ?? (hasAwsShape(creds) ? 'aws' : 'openai');
+        if (target === 'aws') {
+            if (!out.aws && (creds.accessKeyId || creds.secretAccessKey || creds.region)) {
+                out.aws = {
+                    accessKeyId: String(creds.accessKeyId ?? ''),
+                    secretAccessKey: String(creds.secretAccessKey ?? ''),
+                    region: String(creds.region ?? 'us-east-1'),
+                };
+            }
+        } else {
+            // Generic apiKey-bearing slot.
+            const existing = (out as unknown as Record<string, { apiKey?: string } | undefined>)[target];
+            if (!existing?.apiKey && creds.apiKey) {
+                (out as unknown as Record<string, { apiKey: string }>)[target] = { apiKey: String(creds.apiKey) };
+            }
+        }
+    }
+    return out;
+}
+
+/**
  * Load auth credentials from ~/.memoryblock/ws/auth.json
+ *
+ * Accepts both the new generic `auth.providers[slug]` shape and the legacy
+ * top-level per-provider fields. Returns a flattened AuthConfig that
+ * exposes both, so downstream code reading `auth.openai.apiKey` continues
+ * to work even when the user only stored `auth.providers.openai.apiKey`.
  */
 export async function loadAuth(): Promise<AuthConfig> {
     const raw = await readJsonSafe(AUTH_PATH, {});
-    return parseConfig(AuthConfigSchema, raw, AUTH_PATH);
+    const parsed = parseConfig(AuthConfigSchema, raw, AUTH_PATH);
+    return flattenProviderAuth(parsed);
 }
 
 export async function saveAuth(auth: AuthConfig): Promise<void> {
