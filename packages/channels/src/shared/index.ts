@@ -80,6 +80,8 @@ export class SharedChannel implements Channel {
                 timestamp: msg.timestamp || new Date().toISOString(),
                 processed: true,
                 ...(msg.costReport ? { costReport: msg.costReport } : {}),
+                ...(msg.sessionReport ? { sessionReport: msg.sessionReport } : {}),
+                ...(msg.totalReport ? { totalReport: msg.totalReport } : {}),
             });
 
             await fsp.writeFile(this.chatFile, JSON.stringify(msgs, null, 4), 'utf8');

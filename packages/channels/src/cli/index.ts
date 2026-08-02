@@ -124,13 +124,28 @@ export class CLIChannel implements Channel {
                 process.stdout.write('\n');
             }
 
-            if (message.costReport) {
-                console.log(THEME.dim(`[${message.costReport}]`));
-                this.lastSpeakerName = null; // Cost report closes the turn
+            if (message.costReport || message.sessionReport || message.totalReport) {
+                this.renderCostBadge(message);
+                this.lastSpeakerName = null; // Cost badge closes the turn
             }
             this.isStreaming = false; // reset stream state
             console.log('');
         }
+    }
+
+    /**
+     * Render the token-cost badge below the response. Three columns:
+     * per-turn (this message), session, and total. Skips any column whose
+     * data is missing so a degraded ChannelMessage still renders.
+     */
+    private renderCostBadge(message: ChannelMessage): void {
+        const parts: string[] = [];
+        if (message.costReport)    parts.push(`turn: ${message.costReport}`);
+        if (message.sessionReport) parts.push(`session: ${message.sessionReport}`);
+        if (message.totalReport)   parts.push(`total: ${message.totalReport}`);
+
+        const line = parts.join('  ·  ');
+        console.log(THEME.dim(`  · ${line} ·`));
     }
 
     /**
@@ -159,33 +174,60 @@ export class CLIChannel implements Channel {
     }
 
     async requestApproval(request: ApprovalRequest): Promise<boolean> {
+        // Single-key approval: pause readline, flip stdin into raw mode,
+        // wait for `a` / `Enter` / `y` to approve, `d` / `n` / `Esc` to deny.
+        // Avoids the readline `question()` call which conflicts with
+        // streaming and silently swallows Enter during a live turn.
         return new Promise<boolean>((resolve) => {
-            const rl = this.rl || createInterface({ input: process.stdin, output: process.stdout });
-
             console.log('');
             console.log(chalk.bgYellow.black(' ⚠ APPROVAL REQUIRED '));
             console.log('');
             console.log(`  ${chalk.bold(request.toolName)} ${THEME.dim('·')} ${THEME.dim(request.toolDescription || request.description)}`);
             console.log(`  ${THEME.dim(`${request.blockName} · ${request.monitorName}`)}`);
             console.log('');
-            console.log(`  ${chalk.yellow('A')} ${THEME.dim('or')} ${chalk.yellow('Enter')} ${THEME.dim('= approve')}  ·  ${chalk.yellow('D')} ${THEME.dim('= deny')}`);
+            console.log(`  ${chalk.green('A')} ${THEME.dim('or')} ${chalk.yellow('Enter')} ${THEME.dim('= approve')}  ·  ${chalk.red('D')} ${THEME.dim('or')} ${chalk.yellow('Esc')} ${THEME.dim('= deny')}`);
 
-            rl.question('  ', (answer: string) => {
-                const lower = answer.trim().toLowerCase();
-                const approved = lower === 'a' || lower === 'approve' || lower === 'y' || answer.trim() === '';
-
-                moveCursor(process.stdout, 0, -1);
-                clearLine(process.stdout, 0);
+            const finish = (approved: boolean): void => {
+                process.stdin.removeListener('data', onData);
+                if (typeof process.stdin.setRawMode === 'function') {
+                    try { process.stdin.setRawMode(false); } catch { /* tty may not support */ }
+                }
+                if (this.rl) {
+                    try { this.rl.resume(); } catch { /* already closed */ }
+                }
                 if (approved) {
                     console.log(chalk.green(`  ✓ ${request.toolName} approved`));
                 } else {
                     console.log(chalk.red(`  ✗ ${request.toolName} denied`));
                 }
                 console.log('');
-
-                if (!this.rl) rl.close();
                 resolve(approved);
-            });
+            };
+
+            const onData = (chunk: Buffer | string): void => {
+                const k = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
+                // A single keystroke can produce a multi-char string (escape
+                // sequences, paste, etc). Only inspect the first byte.
+                const ch = k[0];
+                if (ch === 'a' || ch === 'A' || ch === 'y' || ch === 'Y' || ch === '\r' || ch === '\n') {
+                    finish(true);
+                } else if (ch === 'd' || ch === 'D' || ch === 'n' || ch === 'N' || ch === '\x1b') {
+                    finish(false);
+                } else if (ch === '\x03') {
+                    // Ctrl+C = treat as deny so the user can abort cleanly.
+                    finish(false);
+                }
+            };
+
+            // Pause readline so it doesn't double-read our raw key.
+            if (this.rl) {
+                try { this.rl.pause(); } catch { /* already closed */ }
+            }
+            if (typeof process.stdin.setRawMode === 'function') {
+                try { process.stdin.setRawMode(true); } catch { /* tty may not support */ }
+            }
+            process.stdin.resume();
+            process.stdin.on('data', onData);
         });
     }
 
