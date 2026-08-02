@@ -12,6 +12,22 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./v1": {
+      "types": "./dist/v1-reexport.d.ts",
+      "import": "./dist/v1-reexport.js"
+    },
+    "./router": {
+      "types": "./dist/router.d.ts",
+      "import": "./dist/router.js"
+    },
+    "./adapter-registry": {
+      "types": "./dist/adapter-registry.d.ts",
+      "import": "./dist/adapter-registry.js"
+    },
+    "./handlers/auth": {
+      "types": "./dist/handlers/auth-handler.d.ts",
+      "import": "./dist/handlers/auth-handler.js"
     }
   },
   "scripts": {
@@ -20,11 +36,13 @@
   },
   "devDependencies": {
     "@memoryblock/core": "workspace:*",
+    "@memoryblock/types": "workspace:*",
     "@types/ws": "^8.18.1"
   },
   "dependencies": {
+    "@memoryblock/adapters": "workspace:*",
     "@memoryblock/plugin-installer": "workspace:*",
-    "ws": "^8.18.1"
+    "ws": "^8.21.0"
   },
   "peerDependencies": {
     "@memoryblock/core": "workspace:*"

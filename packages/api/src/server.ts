@@ -9,6 +9,13 @@ import {
     loadBlockConfig, loadAuth, saveGlobalConfig,
 } from '@memoryblock/core';
 import { validateAuthToken } from './auth.js';
+import type { Router } from './router.js';
+import {
+    handleGetAuth,
+    handleGetProviderAuth,
+    handleUpdateProviderAuth,
+    handleDeleteProviderAuth,
+} from './handlers/auth-handler.js';
 
 // ─── Runtime Compatibility Layer ─────────────────────────────────────
 // These helpers bridge node:http's IncomingMessage/ServerResponse with
@@ -76,6 +83,13 @@ export interface ApiServerConfig {
     authToken: string;
     workspacePath: string;
     webRoot?: string;
+    /**
+     * Network interface to bind to. Defaults to `127.0.0.1` so the API
+     * server is never reachable from other machines on the LAN unless
+     * the user explicitly opts in. Set to `0.0.0.0` only when the user
+     * deliberately wants remote access (and understands the risk).
+     */
+    host?: string;
 }
 
 interface WsData {
@@ -109,9 +123,29 @@ export class ApiServer {
     private wsData: WeakMap<WebSocket, WsData> = new WeakMap();
     // Map of blockName -> fs.FSWatcher
     private watchers: Map<string, FSWatcher> = new Map();
+    /** Pluggable route groups registered by external apps. */
+    private routers: Array<{ prefix: string; router: Router }> = [];
+    /** Prefixes that bypass bearer-token auth (e.g. public health checks). */
+    private publicPrefixes: string[] = ['/v1/health', '/api/health', '/api/auth/status'];
 
     constructor(config: ApiServerConfig) {
         this.config = config;
+    }
+
+    /**
+     * Mount a router under a URL prefix. Routes inside the router are
+     * matched AFTER the built-in `/api/*` routes. Designed so external
+     * apps can plug in their own route groups without forking the server.
+     */
+    registerRouter(prefix: string, router: Router): this {
+        this.routers.push({ prefix, router });
+        return this;
+    }
+
+    /** Add a URL prefix to the public-auth allowlist (skip bearer check). */
+    allowPublic(prefix: string): this {
+        if (!this.publicPrefixes.includes(prefix)) this.publicPrefixes.push(prefix);
+        return this;
     }
 
     private extractToken(req: CompatRequest): string | null {
@@ -215,8 +249,12 @@ export class ApiServer {
                     }
                 }
 
-                // Auth check for API routes
-                if (path.startsWith('/api/') && path !== '/api/health' && path !== '/api/auth/status') {
+                // Auth check for protected API + pluggable routes
+                const isPublic = self.publicPrefixes.some((p) => path === p || path.startsWith(p + '/'));
+                const isProtected = (path.startsWith('/api/') || path.startsWith('/v1/'))
+                    && self.routers.some((r) => path === r.prefix || path.startsWith(r.prefix + '/'))
+                    || (path.startsWith('/api/') && !isPublic);
+                if (isProtected && !isPublic) {
                     const token = self.extractToken(req);
                     const currentToken = await self.getDynamicToken();
                     if (!token || !validateAuthToken(token, currentToken)) {
@@ -225,7 +263,7 @@ export class ApiServer {
                     }
                 }
 
-                // API Routes
+                // API Routes (legacy /api/* — block + dashboard management)
                 try {
                     const response = await self.routeRequest(req, url, path);
                     if (response) {
@@ -235,6 +273,25 @@ export class ApiServer {
                 } catch (err) {
                     await sendResponse(self.error(500, `Internal error: ${(err as Error).message}`), nodeRes);
                     return;
+                }
+
+                // Pluggable routers (e.g. /v1/*) — match the full path
+                // against the router's own route patterns (prefix is only
+                // used for the auth + scope check).
+                for (const { prefix, router } of self.routers) {
+                    if (path === prefix || path.startsWith(prefix + '/')) {
+                        const match = router.match(req.method, path);
+                        if (match) {
+                            try {
+                                const response = await match.handler(req as any, match.params);
+                                await sendResponse(response, nodeRes);
+                                return;
+                            } catch (err) {
+                                await sendResponse(self.error(500, `Internal error: ${(err as Error).message}`), nodeRes);
+                                return;
+                            }
+                        }
+                    }
                 }
 
                 // Static Web UI Serving
@@ -258,6 +315,30 @@ export class ApiServer {
             if (url.pathname !== '/api/ws') {
                 socket.destroy();
                 return;
+            }
+
+            // CWE-1385: Cross-origin WebSocket hijacking. Reject any
+            // request that carries an Origin header for a host we are
+            // not bound to. CLI / Node attacher clients don't send an
+            // Origin header, so they pass through.
+            const origin = req.headers['origin'];
+            if (typeof origin === 'string' && origin.length > 0) {
+                let originUrl: URL;
+                try { originUrl = new URL(origin); } catch {
+                    socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+                    socket.destroy();
+                    return;
+                }
+                const bindHost = this.config.host ?? '127.0.0.1';
+                const allowed = new Set<string>([
+                    bindHost,
+                    '127.0.0.1', 'localhost', '::1',
+                ]);
+                if (!allowed.has(originUrl.hostname)) {
+                    socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+                    socket.destroy();
+                    return;
+                }
             }
 
             // Auth check for WebSocket connections
@@ -302,9 +383,12 @@ export class ApiServer {
             });
         });
 
-        // Start listening
+        // Start listening. Default bind is loopback only (127.0.0.1) so
+        // the API and web dashboard are never reachable from other hosts
+        // unless the user explicitly opts in via `mblk server start --host`.
+        const bindHost = this.config.host ?? '127.0.0.1';
         await new Promise<void>((resolve) => {
-            this.server!.listen(this.config.port, () => resolve());
+            this.server!.listen(this.config.port, bindHost, () => resolve());
         });
     }
 
@@ -318,6 +402,18 @@ export class ApiServer {
             const token = this.extractToken(req);
             const valid = token ? validateAuthToken(token, this.config.authToken) : false;
             return this.json({ authenticated: valid });
+        }
+
+        // /api/auth CRUD — for the web UI settings page
+        if (path === '/api/auth' && req.method === 'GET') {
+            return await handleGetAuth();
+        }
+        const providerAuthMatch = path.match(/^\/api\/auth\/([a-z]+)$/);
+        if (providerAuthMatch) {
+            const provider = providerAuthMatch[1];
+            if (req.method === 'GET')  return await handleGetProviderAuth(provider);
+            if (req.method === 'PUT')  return await handleUpdateProviderAuth(provider, await req.json().catch(() => ({})));
+            if (req.method === 'DELETE') return await handleDeleteProviderAuth(provider);
         }
 
         // GET /api/version — check for updates (cached, non-blocking)
@@ -474,6 +570,35 @@ export class ApiServer {
         if (configMatch) {
             if (req.method === 'GET') return await this.handleGetBlockConfig(configMatch[1]);
             if (req.method === 'PUT') return await this.handleUpdateBlockConfig(configMatch[1], req);
+        }
+
+        // Block permissions: /api/blocks/:name/permissions (GET, PUT)
+        const permsMatch = path.match(/^\/api\/blocks\/([^/]+)\/permissions$/);
+        if (permsMatch) {
+            if (req.method === 'GET') return await this.handleGetBlockPermissions(permsMatch[1]);
+            if (req.method === 'PUT') return await this.handleUpdateBlockPermissions(permsMatch[1], req);
+        }
+
+        // Superblock toggle: POST /api/blocks/:name/superblock with { on: boolean }
+        const superMatch = path.match(/^\/api\/blocks\/([^/]+)\/superblock$/);
+        if (superMatch && req.method === 'POST') {
+            return await this.handleSuperblock(superMatch[1], req);
+        }
+
+        // Block live cost: /api/blocks/:name/cost (GET)
+        const costMatch = path.match(/^\/api\/blocks\/([^/]+)\/cost$/);
+        if (costMatch && req.method === 'GET') {
+            return await this.handleGetBlockCost(costMatch[1]);
+        }
+
+        // Provider catalogue: GET /api/providers
+        if (req.method === 'GET' && path === '/api/providers') {
+            return await this.handleGetProviders();
+        }
+
+        // Server status (PID, port, host, uptime): GET /api/server/status
+        if (req.method === 'GET' && path === '/api/server/status') {
+            return await this.handleGetServerStatus();
         }
 
         // Block logs: /api/blocks/:name/logs
@@ -1231,6 +1356,133 @@ export class ApiServer {
         } catch (err) {
             return this.error(500, `Delete failed: ${(err as Error).message}`);
         }
+    }
+
+    // ─── Block Permissions (GET / PUT /api/blocks/:name/permissions) ─────────
+    private async handleGetBlockPermissions(name: string): Promise<Response> {
+        try {
+            const { loadBlockConfig, resolveBlockPath } = await import('@memoryblock/core');
+            const globalConfig = await loadGlobalConfig();
+            const blockPath = resolveBlockPath(globalConfig, name);
+            const config = await loadBlockConfig(blockPath);
+            const perms = config.permissions || { scope: 'block', allowShell: false, allowNetwork: true, maxTimeout: 120_000 };
+            return this.json({ permissions: perms });
+        } catch (err) {
+            return this.error(404, `Block "${name}" not found: ${(err as Error).message}`);
+        }
+    }
+
+    private async handleUpdateBlockPermissions(name: string, req: CompatRequest): Promise<Response> {
+        try {
+            const body = await req.json() as { scope?: string; allowShell?: boolean; allowNetwork?: boolean; maxTimeout?: number };
+            const VALID_SCOPES = ['block', 'workspace', 'system'];
+            if (body.scope !== undefined && !VALID_SCOPES.includes(body.scope)) {
+                return this.error(400, `Invalid scope: "${body.scope}". Use: block, workspace, or system.`);
+            }
+            const { loadBlockConfig, saveBlockConfig, resolveBlockPath } = await import('@memoryblock/core');
+            const globalConfig = await loadGlobalConfig();
+            const blockPath = resolveBlockPath(globalConfig, name);
+            const config = await loadBlockConfig(blockPath);
+            const perms = config.permissions || { scope: 'block', allowShell: false, allowNetwork: true, maxTimeout: 120_000 };
+            if (body.scope !== undefined) perms.scope = body.scope as 'block' | 'workspace' | 'system';
+            if (typeof body.allowShell === 'boolean') perms.allowShell = body.allowShell;
+            if (typeof body.allowNetwork === 'boolean') perms.allowNetwork = body.allowNetwork;
+            if (typeof body.maxTimeout === 'number') perms.maxTimeout = body.maxTimeout;
+            (config as { permissions?: unknown }).permissions = perms;
+            await saveBlockConfig(blockPath, config);
+            return this.json({ success: true, permissions: perms });
+        } catch (err) {
+            return this.error(500, `Permission update failed: ${(err as Error).message}`);
+        }
+    }
+
+    // ─── Superblock toggle (POST /api/blocks/:name/superblock {on: bool}) ──
+    private async handleSuperblock(name: string, req: CompatRequest): Promise<Response> {
+        try {
+            const body = await req.json() as { on?: boolean };
+            if (typeof body.on !== 'boolean') {
+                return this.error(400, "Body must be { on: boolean }.");
+            }
+            const { loadBlockConfig, saveBlockConfig, resolveBlockPath } = await import('@memoryblock/core');
+            const globalConfig = await loadGlobalConfig();
+            const blockPath = resolveBlockPath(globalConfig, name);
+            const config = await loadBlockConfig(blockPath);
+            const perms = config.permissions || { scope: 'block', allowShell: false, allowNetwork: true, maxTimeout: 120_000 };
+            // Superblock = scope 'system' + allowShell true. Revoke = back to block-scope.
+            if (body.on) {
+                perms.scope = 'system';
+                perms.allowShell = true;
+            } else {
+                perms.scope = 'block';
+                perms.allowShell = false;
+            }
+            (config as { permissions?: unknown }).permissions = perms;
+            await saveBlockConfig(blockPath, config);
+            return this.json({ success: true, on: body.on, permissions: perms });
+        } catch (err) {
+            return this.error(500, `Superblock toggle failed: ${(err as Error).message}`);
+        }
+    }
+
+    // ─── Live cost: GET /api/blocks/:name/cost ───────────────────────────────
+    private async handleGetBlockCost(name: string): Promise<Response> {
+        try {
+            const { promises: fsp } = await import('node:fs');
+            const { resolveBlockPath } = await import('@memoryblock/core');
+            const globalConfig = await loadGlobalConfig();
+            const blockPath = resolveBlockPath(globalConfig, name);
+            const costPath = join(blockPath, 'costs.json');
+            const raw = await fsp.readFile(costPath, 'utf-8');
+            const data = JSON.parse(raw);
+            return this.json({ block: name, costs: data });
+        } catch {
+            // Missing costs.json is normal for fresh blocks — return zeros.
+            return this.json({
+                block: name,
+                costs: { sessionInput: 0, sessionOutput: 0, totalInput: 0, totalOutput: 0, lastUpdated: null },
+            });
+        }
+    }
+
+    // ─── Provider catalogue: GET /api/providers ──────────────────────────────
+    // Re-exports the aiplug registry so the web UI can render provider pickers
+    // without depending on aiplug directly.
+    private async handleGetProviders(): Promise<Response> {
+        try {
+            const aiplug = await import('aiplug');
+            const providers = aiplug.AIPlug.providers().filter((p: { isAlias?: boolean }) => !p.isAlias);
+            return this.json({ providers });
+        } catch {
+            return this.json({ providers: [], note: 'aiplug not available' });
+        }
+    }
+
+    // ─── Server status: GET /api/server/status ────────────────────────────────
+    private async handleGetServerStatus(): Promise<Response> {
+        const { promises: fsp } = await import('node:fs');
+        const path = await import('node:path');
+        const os = await import('node:os');
+
+        let pid: number | null = null;
+        let port: string | null = null;
+        try {
+            const pidStr = await fsp.readFile(path.join(os.homedir(), '.memoryblock', 'server.pid'), 'utf-8');
+            const n = parseInt(pidStr.trim(), 10);
+            pid = isNaN(n) ? null : n;
+        } catch { /* no pid file */ }
+        try {
+            port = (await fsp.readFile(path.join(os.homedir(), '.memoryblock', 'server.port'), 'utf-8')).trim();
+        } catch { /* no port file */ }
+
+        return this.json({
+            version: API_VERSION,
+            pid: process.pid,
+            storedPid: pid,
+            storedPort: port,
+            host: this.config.host ?? '127.0.0.1',
+            uptime: process.uptime(),
+            startedAt: new Date(Date.now() - process.uptime() * 1000).toISOString(),
+        });
     }
 
     private async serveStatic(urlPath: string): Promise<Response> {
