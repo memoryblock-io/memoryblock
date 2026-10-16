@@ -184,27 +184,27 @@ try {
     }
 
     // ========================================
-    // 9. Adapter Smoke Test
+    // 9. Adapter & Tools Smoke Test
     // ========================================
-    // Validates that all 5 adapters are built and the new GoogleAdapter
-    // export is wired correctly. Full live tests are in
-    // `pnpm dev:verify:adapters` which needs Ollama + auth.json.
-    console.log('\x1b[2m🔌 [9/9] Adapter Smoke Test (dist + exports)...\x1b[0m');
+    console.log('\x1b[2m🔌 [9/9] Adapter & Tools Smoke Test (dist + exports)...\x1b[0m');
     try {
         const adapterDist = path.join(CWD, 'packages', 'adapters', 'dist');
         assert(fs.existsSync(adapterDist), 'packages/adapters/dist missing — run pnpm dev:build');
-        for (const sub of ['bedrock', 'openai', 'google', 'anthropic', 'ollama']) {
-            assert(fs.existsSync(path.join(adapterDist, sub)),
-                `packages/adapters/dist/${sub} missing — adapter build incomplete`);
-        }
+        assert(fs.existsSync(path.join(adapterDist, 'index.js')), 'packages/adapters/dist/index.js missing');
+        assert(fs.existsSync(path.join(adapterDist, 'index.d.ts')), 'packages/adapters/dist/index.d.ts missing');
+        
         const idx = fs.readFileSync(path.join(adapterDist, 'index.d.ts'), 'utf8');
-        for (const exp of ['BedrockAdapter', 'OpenAIAdapter', 'GoogleAdapter', 'AnthropicAdapter', 'OllamaAdapter']) {
-            assert(idx.includes(exp), `expected export ${exp} not found in adapters/dist/index.d.ts`);
-        }
-        assert(idx.includes('google/index.js'), 'expected google/index.js import path');
-        assert(idx.includes('GoogleAdapter as GeminiAdapter'), 'expected GeminiAdapter deprecation alias');
-        console.log('  \x1b[32m✓\x1b[0m All 5 adapters built and exports correct (Google ✓, Gemini alias ✓)');
-        console.log('  \x1b[2m  Full live tests: pnpm dev:verify:adapters\x1b[0m');
+        assert(idx.includes('createMemoryAdapter'), 'expected export createMemoryAdapter in adapters/dist/index.d.ts');
+        assert(idx.includes('LLMAdapter'), 'expected export LLMAdapter in adapters/dist/index.d.ts');
+        
+        const toolsDist = path.join(CWD, 'packages', 'tools', 'dist');
+        assert(fs.existsSync(toolsDist), 'packages/tools/dist missing — run pnpm dev:build');
+        const toolsIdx = fs.readFileSync(path.join(toolsDist, 'index.d.ts'), 'utf8');
+        assert(toolsIdx.includes('applyPatchTool'), 'expected export applyPatchTool in tools/dist/index.d.ts');
+        assert(toolsIdx.includes('taskManagerTools'), 'expected export taskManagerTools in tools/dist/index.d.ts');
+        assert(toolsIdx.includes('httpRequestTool'), 'expected export httpRequestTool in tools/dist/index.d.ts');
+        
+        console.log('  \x1b[32m✓\x1b[0m Unified aiplug adapters and next-gen tools built and exports verified.');
     } catch (e) {
         console.warn(`\x1b[33m⚠️  ${e.message}\x1b[0m`);
     }

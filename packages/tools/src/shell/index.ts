@@ -97,5 +97,19 @@ export const executeCommandTool: Tool = {
 /** Check if a command is safe (export for use in approval logic). */
 export { isSafeCommand };
 
+import { taskManagerTools } from './task.js';
+export {
+    taskManagerTools,
+    spawnTaskTool,
+    taskStatusTool,
+    taskLogsTool,
+    taskSendInputTool,
+    taskKillTool,
+    listTasksTool,
+} from './task.js';
+
 /** All built-in shell tools. */
-export const shellTools: Tool[] = [executeCommandTool];
+export const shellTools: Tool[] = [
+    executeCommandTool,
+    ...taskManagerTools,
+];

@@ -28,7 +28,10 @@ const SENSITIVE_PATTERNS = [
 ];
 
 // Shell tools that need special handling
-const SHELL_TOOL_NAMES = ['execute_command', 'run_lint', 'run_build', 'run_test'];
+const SHELL_TOOL_NAMES = [
+    'execute_command', 'run_lint', 'run_build', 'run_test',
+    'spawn_task', 'task_status', 'task_logs', 'task_send_input', 'task_kill', 'list_tasks',
+];
 
 export class ToolSandbox {
 

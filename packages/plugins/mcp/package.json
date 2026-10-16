@@ -1,0 +1,49 @@
+{
+  "name": "@memoryblock/plugin-mcp",
+  "version": "0.1.11",
+  "type": "module",
+  "description": "Model Context Protocol (MCP) plugin for Memoryblock.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@memoryblock/types": "workspace:*"
+  },
+  "peerDependencies": {
+    "@memoryblock/core": "workspace:*"
+  },
+  "keywords": [
+    "memoryblock",
+    "ai-agent",
+    "mcp",
+    "model-context-protocol",
+    "assistants",
+    "plugin"
+  ],
+  "author": {
+    "name": "Ghazi",
+    "url": "https://mgks.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memoryblock-io/memoryblock.git"
+  },
+  "bugs": {
+    "url": "https://github.com/memoryblock-io/memoryblock/issues"
+  },
+  "homepage": "https://memoryblock.io",
+  "funding": "https://github.com/sponsors/mgks",
+  "license": "MIT"
+}

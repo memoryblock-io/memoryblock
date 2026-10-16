@@ -1,10 +1,21 @@
 export { ToolRegistry } from './registry.js';
 export type { Tool } from './base.js';
 export { createSchema } from './base.js';
-export { fsTools } from './fs/index.js';
+export { fsTools, applyPatchTool } from './fs/index.js';
 export { extraFsTools } from './fs/extras.js';
-export { shellTools, isSafeCommand } from './shell/index.js';
+export {
+    shellTools,
+    isSafeCommand,
+    taskManagerTools,
+    spawnTaskTool,
+    taskStatusTool,
+    taskLogsTool,
+    taskSendInputTool,
+    taskKillTool,
+    listTasksTool,
+} from './shell/index.js';
 export { devTools } from './dev/index.js';
+export { netTools, httpRequestTool } from './net/http.js';
 export { identityTools } from './core/identity.js';
 export { channelTools } from './core/channels.js';
 export { systemTools } from './core/system.js';
@@ -18,6 +29,7 @@ import { fsTools } from './fs/index.js';
 import { extraFsTools } from './fs/extras.js';
 import { shellTools } from './shell/index.js';
 import { devTools } from './dev/index.js';
+import { netTools } from './net/http.js';
 import { identityTools } from './core/identity.js';
 import { channelTools } from './core/channels.js';
 import { systemTools } from './core/system.js';
@@ -37,6 +49,7 @@ export function createDefaultRegistry(): ToolRegistry {
     for (const tool of extraFsTools) registry.register(tool);
     for (const tool of shellTools) registry.register(tool);
     for (const tool of devTools) registry.register(tool);
+    for (const tool of netTools) registry.register(tool);
     for (const tool of identityTools) registry.register(tool);
     for (const tool of channelTools) registry.register(tool);
     for (const tool of systemTools) registry.register(tool);

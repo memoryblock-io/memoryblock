@@ -328,8 +328,11 @@ export const fileInfoTool: Tool = {
     },
 };
 
+import { applyPatchTool } from './patch.js';
+export { applyPatchTool } from './patch.js';
+
 /** All built-in FS tools. */
 export const fsTools: Tool[] = [
     readFileTool, writeFileTool, listDirectoryTool, createDirectoryTool,
-    searchFilesTool, replaceInFileTool, fileInfoTool,
+    searchFilesTool, replaceInFileTool, fileInfoTool, applyPatchTool,
 ];

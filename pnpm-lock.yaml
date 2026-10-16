@@ -203,6 +203,15 @@ importers:
         specifier: workspace:*
         version: link:../../types
 
+  packages/plugins/mcp:
+    dependencies:
+      '@memoryblock/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@memoryblock/types':
+        specifier: workspace:*
+        version: link:../../types
+
   packages/plugins/web-search:
     dependencies:
       '@memoryblock/core':

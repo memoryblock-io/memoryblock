@@ -1,6 +1,6 @@
 {
   "name": "@memoryblock/plugin-aws",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "type": "module",
   "description": "Official plugin for AWS integrations in memoryblock.",
   "main": "./dist/index.js",
